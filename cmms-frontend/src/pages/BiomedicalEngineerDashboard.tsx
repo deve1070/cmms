@@ -27,15 +27,26 @@ import { useAuth } from '../contexts/AuthContext';
 import { equipmentApi, workOrdersApi, maintenanceApi, contractsApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 
+// TODO: Move to a shared types file if used in multiple places
 interface Equipment {
   id: string;
   serialNumber: string;
   manufacturerName: string;
   modelNumber: string;
-  status: string;
-  lastMaintenance: string;
-  nextMaintenance: string;
+  manufacturerServiceNumber?: string | null;
+  vendorName?: string | null;
+  vendorCode?: string | null;
   locationDescription: string;
+  locationCode?: string | null;
+  purchasePrice: number;
+  installationDate: string;
+  warrantyExpirationDate: string;
+  status: 'Operational' | 'Needs Maintenance' | 'Out of Service' | 'Decommissioned';
+  category: string;
+  department: string;
+  lastMaintenance?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface WorkOrder {
@@ -97,27 +108,55 @@ const BiomedicalEngineerDashboard: React.FC = () => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [maintenanceReports, setMaintenanceReports] = useState<MaintenanceReport[]>([]);
-  const [contracts, setContracts] = useState<Contract[]>([]); // Added state for contracts
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [nearingWarrantyEndCount, setNearingWarrantyEndCount] = useState(0);
+  const [pendingRenewalsCount, setPendingRenewalsCount] = useState(0);
+
+  const addDays = (date: Date, days: number): Date => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        // Placeholder for contracts fetching
+
         const [equipmentData, workOrdersData, reportsData, contractsData] = await Promise.all([
           equipmentApi.getAll(),
           workOrdersApi.getAll(),
           maintenanceApi.getAll({}),
-          contractsApi.getAll(), // Added contracts API call
+          contractsApi.getAll(),
         ]) as [Equipment[], WorkOrder[], MaintenanceReport[], Contract[]];
 
         setEquipment(equipmentData);
         setWorkOrders(workOrdersData);
         setMaintenanceReports(reportsData);
-        setContracts(contractsData); // Set contracts data
+        setContracts(contractsData);
+
+        // Calculate "Equipment Nearing Warranty End"
+        const today = new Date();
+        const warrantyThresholdDate = addDays(today, 60);
+        const nearingWarranty = equipmentData.filter(e => {
+          if (!e.warrantyExpirationDate) return false;
+          const warrantyEndDate = new Date(e.warrantyExpirationDate);
+          return warrantyEndDate >= today && warrantyEndDate <= warrantyThresholdDate;
+        });
+        setNearingWarrantyEndCount(nearingWarranty.length);
+
+        // Calculate "Pending Contract Renewals"
+        const contractRenewalThresholdDate = addDays(today, 60);
+        const pendingRenewals = contractsData.filter(c => {
+          if (!c.endDate) return false;
+          const contractEndDate = new Date(c.endDate);
+          return contractEndDate >= today && contractEndDate <= contractRenewalThresholdDate;
+        });
+        setPendingRenewalsCount(pendingRenewals.length);
+
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setError('Failed to load dashboard data. Please try again later.');
@@ -292,13 +331,11 @@ const BiomedicalEngineerDashboard: React.FC = () => {
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <h3 className="text-sm font-medium text-gray-500">Equipment Nearing Warranty End</h3>
-                {/* TODO: Implement data fetching for warranty end */}
-                <p className="mt-1 text-3xl font-semibold text-gray-900">N/A</p>
+                <p className="mt-1 text-3xl font-semibold text-gray-900">{nearingWarrantyEndCount}</p>
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <h3 className="text-sm font-medium text-gray-500">Pending Contract Renewals</h3>
-                {/* TODO: Implement data fetching for contract renewals */}
-                <p className="mt-1 text-3xl font-semibold text-gray-900">N/A</p>
+                <p className="mt-1 text-3xl font-semibold text-gray-900">{pendingRenewalsCount}</p>
               </div>
             </div>
           </section>
@@ -348,12 +385,17 @@ const BiomedicalEngineerDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {workOrders.map((wo) => (
-                    <tr key={wo.id} className="bg-gray-50 hover:bg-gray-100">
-                      <td className="px-4 py-2">{wo.equipmentId}</td>
-                      <td className="px-4 py-2">{wo.issue}</td>
-                      <td className="px-4 py-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  {workOrders.map((wo) => {
+                    const equipmentItem = equipment.find(e => e.id === wo.equipmentId);
+                    const equipmentName = equipmentItem
+                      ? `${equipmentItem.manufacturerName} ${equipmentItem.modelNumber} (S/N: ${equipmentItem.serialNumber})`
+                      : `ID: ${wo.equipmentId}`;
+                    return (
+                      <tr key={wo.id} className="bg-gray-50 hover:bg-gray-100">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{equipmentName}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700">{wo.issue}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           wo.status === 'completed' ? 'bg-green-100 text-green-800' :
                           wo.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                           'bg-yellow-100 text-yellow-800'

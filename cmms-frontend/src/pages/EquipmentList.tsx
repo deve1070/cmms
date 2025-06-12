@@ -5,7 +5,10 @@ import {
   PlusIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
-} from '@heroicons/react/24/outline';
+  ChevronUpDownIcon, // For sorting indication
+  ChevronUpIcon,     // For asc sort indication
+  ChevronDownIcon,   // For desc sort indication
+} from '@heroicons/react/24/outline'; // Using outline for consistency, can switch to solid if preferred
 
 // TODO: Move to a shared types file
 interface Equipment {
@@ -31,10 +34,12 @@ interface Equipment {
 
 const EquipmentList: React.FC = () => {
   const navigate = useNavigate();
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]); // Renamed state variable
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [sortField, setSortField] = useState<keyof Equipment | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     const fetchEquipmentList = async () => { // Renamed function
@@ -52,18 +57,67 @@ const EquipmentList: React.FC = () => {
     fetchEquipmentList();
   }, []);
 
-  const filteredEquipment = equipmentList.filter(item => { // Changed to equipmentList
+  const filteredEquipment = equipmentList.filter(item => {
     const searchString = searchTerm.toLowerCase();
     const matchesSearch =
-      item.modelNumber.toLowerCase().includes(searchString) ||
-      item.serialNumber.toLowerCase().includes(searchString) ||
-      item.manufacturerName.toLowerCase().includes(searchString) ||
-      item.locationDescription.toLowerCase().includes(searchString) ||
-      item.category.toLowerCase().includes(searchString) ||
-      item.department.toLowerCase().includes(searchString);
-    const matchesStatus = filterStatus === 'all' || item.status.toLowerCase() === filterStatus.toLowerCase();
+      (item.modelNumber?.toLowerCase() || '').includes(searchString) ||
+      (item.serialNumber?.toLowerCase() || '').includes(searchString) ||
+      (item.manufacturerName?.toLowerCase() || '').includes(searchString) ||
+      (item.locationDescription?.toLowerCase() || '').includes(searchString) ||
+      (item.category?.toLowerCase() || '').includes(searchString) ||
+      (item.department?.toLowerCase() || '').includes(searchString);
+    const matchesStatus = filterStatus === 'all' || item.status === filterStatus; // Direct comparison with updated filter values
     return matchesSearch && matchesStatus;
   });
+
+  const sortedAndFilteredEquipment = React.useMemo(() => {
+    let sortedItems = [...filteredEquipment];
+    if (sortField) {
+      sortedItems.sort((a, b) => {
+        const valA = a[sortField];
+        const valB = b[sortField];
+
+        // Handle null or undefined values by pushing them to the end
+        if (valA == null && valB == null) return 0;
+        if (valA == null) return 1;
+        if (valB == null) return -1;
+
+        let comparison = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB);
+        } else if (typeof valA === 'number' && typeof valB === 'number') {
+          comparison = valA - valB;
+        } else if (valA instanceof Date && valB instanceof Date) {
+          comparison = valA.getTime() - valB.getTime();
+        } else if (typeof valA === 'string' && Date.parse(valA) && typeof valB === 'string' && Date.parse(valB)) {
+          // Attempt to parse strings as dates if they look like dates (e.g. installationDate)
+          comparison = new Date(valA).getTime() - new Date(valB).getTime();
+        }
+
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+    return sortedItems;
+  }, [filteredEquipment, sortField, sortDirection]);
+
+  const handleSort = (field: keyof Equipment) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortIndicator = ({ fieldName }: { fieldName: keyof Equipment }) => {
+    if (sortField !== fieldName) {
+      return <ChevronUpDownIcon className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ChevronUpIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+    }
+    return <ChevronDownIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+  };
 
   const getStatusColor = (status: Equipment['status']) => { // Typed status parameter
     switch (status) {
@@ -115,9 +169,10 @@ const EquipmentList: React.FC = () => {
               className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Status</option>
-              <option value="operational">Operational</option>
-              <option value="needs calibration">Needs Calibration</option>
-              <option value="maintenance due">Maintenance Due</option>
+              <option value="Operational">Operational</option>
+              <option value="Needs Maintenance">Needs Maintenance</option>
+              <option value="Out of Service">Out of Service</option>
+              <option value="Decommissioned">Decommissioned</option>
             </select>
           </div>
         </div>
@@ -131,20 +186,48 @@ const EquipmentList: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manufacturer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial No.</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Date</th>
-                  {/* Removed last/next maintenance for brevity, can be added back if needed */}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => handleSort('manufacturerName')} className="flex items-center hover:text-blue-600">
+                      Manufacturer <SortIndicator fieldName="manufacturerName" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => handleSort('modelNumber')} className="flex items-center hover:text-blue-600">
+                      Model <SortIndicator fieldName="modelNumber" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => handleSort('serialNumber')} className="flex items-center hover:text-blue-600">
+                      Serial No. <SortIndicator fieldName="serialNumber" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                     <button onClick={() => handleSort('locationDescription')} className="flex items-center hover:text-blue-600">
+                      Location <SortIndicator fieldName="locationDescription" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => handleSort('status')} className="flex items-center hover:text-blue-600">
+                      Status <SortIndicator fieldName="status" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button onClick={() => handleSort('installationDate')} className="flex items-center hover:text-blue-600">
+                      Install Date <SortIndicator fieldName="installationDate" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                     <button onClick={() => handleSort('lastMaintenance')} className="flex items-center hover:text-blue-600">
+                      Last Maintenance <SortIndicator fieldName="lastMaintenance" />
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredEquipment.map((item) => (
+                {sortedAndFilteredEquipment.map((item) => (
                   <tr
                     key={item.id}
-                    onClick={() => navigate(`/equipment/edit/${item.id}`)} // Updated navigation path
+                    onClick={() => navigate(`/equipment/edit/${item.id}`)}
                     className="hover:bg-gray-50 cursor-pointer"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.manufacturerName}</td>
@@ -157,7 +240,10 @@ const EquipmentList: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.installationDate).toLocaleDateString()}
+                      {item.installationDate ? new Date(item.installationDate).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.lastMaintenance ? new Date(item.lastMaintenance).toLocaleDateString() : 'N/A'}
                     </td>
                   </tr>
                 ))}
