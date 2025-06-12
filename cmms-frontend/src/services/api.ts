@@ -95,18 +95,46 @@ export const workOrdersApi = {
 
 // Reports API
 export const reportsApi = {
-  getPerformance: (params: { startDate?: string; endDate?: string; equipmentId?: string }) =>
-    api.get('/reports/performance', { params }).then(res => res.data),
-  getCompliance: (params: { standard?: string; status?: string }) =>
-    api.get('/reports/compliance', { params }).then(res => res.data),
-  create: (data: {
+  // Existing methods (if any specific ones like getPerformance/getCompliance are still needed, keep them)
+  // For this subtask, focusing on generic report management and specific generation endpoints.
+  // The generic create might be removed if all reports are generated via specific functions.
+
+  getAll: async () => {
+    const response = await api.get('/reports');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/reports/${id}`);
+    return response.data;
+  },
+  // Generic create - might be deprecated if all reports are system-generated via specific functions
+  create: async (data: {
     type: string;
     title: string;
-    content: string;
+    content: string; // Should be JSON string
     period: string;
-    metrics: Record<string, any>;
-  }) => api.post('/reports', data).then(res => res.data),
-  delete: (id: string) => api.delete(`/reports/${id}`).then(res => res.data)
+    metrics: Record<string, any>; // Should be JSON string
+    // generatedBy will be set by backend from token
+  }) => {
+    const response = await api.post('/reports', data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/reports/${id}`);
+    return response.data;
+  },
+  generateDowntimeReport: async (data: { periodStart: string; periodEnd: string }) => {
+    const response = await api.post('/reports/generate/downtime', data);
+    return response.data;
+  },
+  generateMaintenanceCostsReport: async (data: { periodStart: string; periodEnd: string }) => {
+    const response = await api.post('/reports/generate/maintenance-costs', data);
+    return response.data;
+  },
+  generateStaffEfficiencyReport: async (data: { periodStart: string; periodEnd: string }) => {
+    const response = await api.post('/reports/generate/staff-efficiency', data);
+    return response.data;
+  }
 };
 
 // Budgets API
@@ -134,7 +162,11 @@ export const contractsApi = {
   create: (data: any) => api.post('/contracts', data).then(res => res.data as Contract),
   update: (id: string, data: any) => api.put(`/contracts/${id}`, data).then(res => res.data as Contract),
   delete: (id: string) => api.delete(`/contracts/${id}`).then(res => res.data),
-  updateStatus: (id: string, status: string) => api.patch(`/contracts/${id}/status`, { status }).then(res => res.data as Contract)
+  updateStatus: (id: string, status: string) => api.patch(`/contracts/${id}/status`, { status }).then(res => res.data as Contract),
+  updateExpiringStatuses: async () => { // Added method
+    const response = await api.post('/contracts/update-expiring-statuses');
+    return response.data;
+  }
 };
 
 // Users API
@@ -199,6 +231,34 @@ export const sparePartsApi = {
     leadTime?: number;
   }) => api.put(`/spare-parts/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/spare-parts/${id}`).then(res => res.data)
+};
+
+// Schedules API (for Preventive Maintenance Schedules)
+export const schedulesApi = {
+  getAll: async () => {
+    const response = await api.get('/schedules');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/schedules/${id}`);
+    return response.data;
+  },
+  create: async (data: any) => { // Consider defining a specific type for schedule creation data
+    const response = await api.post('/schedules', data);
+    return response.data;
+  },
+  update: async (id: string, data: any) => { // Consider defining a specific type for schedule update data
+    const response = await api.put(`/schedules/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/schedules/${id}`);
+    return response.data;
+  },
+  generateWorkOrders: async () => {
+    const response = await api.post('/schedules/generate-work-orders');
+    return response.data;
+  }
 };
 
 export default api;

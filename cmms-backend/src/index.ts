@@ -12,6 +12,7 @@ import budgetsRoutes from './routes/budgets';
 import complianceRoutes from './routes/compliance';
 import maintenanceRoutes from './routes/maintenance';
 import usersRouter from './routes/users';
+import schedulesRouter from './routes/schedules'; // Import the new schedules router
 import { authenticateToken } from './middleware/auth';
 
 const app = express();
@@ -83,6 +84,7 @@ app.use('/api/budgets', budgetsRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/users', usersRouter);
+app.use('/api/schedules', schedulesRouter); // Use the new schedules router
 
 // Start server
 app.listen(port, () => {

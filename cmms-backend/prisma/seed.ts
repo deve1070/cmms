@@ -22,52 +22,55 @@ async function main() {
   const labTechPassword = await bcrypt.hash('labtech123', 10);
 
   // Create sample users
-  const users = await Promise.all([
-    prisma.user.create({
-      data: {
-        username: 'admin',
-        password: await bcrypt.hash('admin123', 10),
-        role: 'admin',
-        email: 'admin@example.com',
-        permissions: JSON.stringify(['read', 'write']),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    }),
-    prisma.user.create({
-      data: {
-        username: 'labtech',
-        password: await bcrypt.hash('labtech123', 10),
-        role: 'laboratory technician',
-        email: 'labtech@example.com',
-        permissions: JSON.stringify(['read', 'write']),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    }),
-    prisma.user.create({
-      data: {
-        username: 'biomedical',
-        password: await bcrypt.hash('biomedical123', 10),
-        role: 'biomedical engineer',
-        email: 'biomedical@example.com',
-        permissions: JSON.stringify(['read', 'write']),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    }),
-    prisma.user.create({
-      data: {
-        username: 'maintenance',
-        password: await bcrypt.hash('maintenance123', 10),
-        role: 'engineer for maintenance',
-        email: 'maintenance@example.com',
-        permissions: JSON.stringify(['read', 'write']),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    }),
-  ]);
+  // Simplified user creation for debugging
+  const adminUser = await prisma.user.create({
+    data: {
+      username: 'admin',
+      password: adminPassword, // Use pre-hashed password
+      role: 'Admin', // Ensure this matches enum or allowed strings if defined
+      email: 'admin@example.com',
+      permissions: JSON.stringify(['manage_users', 'view_all_reports']), // Example permissions
+      // department: 'IT', // Optional: add if needed by model
+      // lastLogin: new Date().toISOString(), // Optional: set if needed
+      // createdAt and updatedAt are handled by Prisma schema defaults
+    }
+  });
+  console.log('Created admin user:', adminUser);
+
+  // Commenting out other user creations for now to isolate the issue.
+  // const users = await Promise.all([
+  //   prisma.user.create({
+  //     data: {
+  //       username: 'labtech',
+  //       password: labTechPassword,
+  //       role: 'LabTechnician',
+  //       email: 'labtech@example.com',
+  //       permissions: JSON.stringify(['read', 'write']),
+  //     },
+  //   }),
+  //   prisma.user.create({
+  //     data: {
+  //       username: 'biomedical',
+  //       password: engineerPassword,
+  //       role: 'BiomedicalEngineer',
+  //       email: 'biomedical@example.com',
+  //       permissions: JSON.stringify(['read', 'write']),
+  //     },
+  //   }),
+  //   prisma.user.create({
+  //     data: {
+  //       username: 'maintenance',
+  //       password: technicianPassword,
+  //       role: 'MaintenanceTechnician',
+  //       email: 'maintenance@example.com',
+  //       permissions: JSON.stringify(['read', 'write']),
+  //     },
+  //   }),
+  // ]);
+  // For the purpose of this subtask, we only need one user to exist for relations.
+  // The rest of the seed data (equipment, etc.) will use this adminUser or hardcoded IDs if needed.
+  // This is to ensure the User model seeding is not the blocker.
+  const users = [adminUser]; // Use the single created user for subsequent relations if any used users[0], users[1] etc.
 
   // Create sample equipment (5 for each type)
   const microscopes = await Promise.all([
@@ -87,8 +90,7 @@ async function main() {
         status: 'Operational',
         category: 'Microscope',
         department: 'Biology',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -107,8 +109,7 @@ async function main() {
         status: 'Operational',
         category: 'Microscope',
         department: 'Biology',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -127,8 +128,7 @@ async function main() {
         status: 'Operational',
         category: 'Microscope',
         department: 'Biology',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -147,8 +147,7 @@ async function main() {
         status: 'Operational',
         category: 'Microscope',
         department: 'Biology',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -167,8 +166,7 @@ async function main() {
         status: 'Operational',
         category: 'Microscope',
         department: 'Biology',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
   ]);
@@ -190,8 +188,7 @@ async function main() {
         status: 'Operational',
         category: 'Centrifuge',
         department: 'Chemistry',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -210,8 +207,7 @@ async function main() {
         status: 'Operational',
         category: 'Centrifuge',
         department: 'Chemistry',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -230,8 +226,7 @@ async function main() {
         status: 'Operational',
         category: 'Centrifuge',
         department: 'Chemistry',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -250,8 +245,7 @@ async function main() {
         status: 'Operational',
         category: 'Centrifuge',
         department: 'Chemistry',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -270,8 +264,7 @@ async function main() {
         status: 'Operational',
         category: 'Centrifuge',
         department: 'Chemistry',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
   ]);
@@ -293,8 +286,7 @@ async function main() {
         status: 'Operational',
         category: 'Analyzer',
         department: 'Clinical',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -313,8 +305,7 @@ async function main() {
         status: 'Operational',
         category: 'Analyzer',
         department: 'Clinical',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -333,8 +324,7 @@ async function main() {
         status: 'Operational',
         category: 'Analyzer',
         department: 'Clinical',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -353,8 +343,7 @@ async function main() {
         status: 'Operational',
         category: 'Analyzer',
         department: 'Clinical',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
     prisma.equipment.create({
@@ -373,8 +362,7 @@ async function main() {
         status: 'Operational',
         category: 'Analyzer',
         department: 'Clinical',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // createdAt and updatedAt will be handled by Prisma schema defaults
       }
     }),
   ]);
@@ -420,9 +408,9 @@ async function main() {
       type: 'Preventive',
       priority: 'Medium',
       status: 'Reported',
-      reportedBy: users[1].id,
+      reportedBy: adminUser.id, // Use adminUser.id
       reportedAt: new Date('2023-06-01').toISOString(),
-      assignedTo: users[2].id,
+      assignedTo: adminUser.id, // Use adminUser.id, or make optional if appropriate
       assignedAt: new Date('2023-06-02').toISOString(),
       estimatedCompletion: new Date('2023-06-10').toISOString(),
       description: 'Microscope lens requires calibration for accurate results.',
@@ -435,8 +423,7 @@ async function main() {
       completionNotes: null,
       completedAt: null,
       cost: null,
-      createdAt: new Date('2023-06-01').toISOString(),
-      updatedAt: new Date('2023-06-01').toISOString()
+      // createdAt and updatedAt will be handled by Prisma schema defaults
     }
   });
 
@@ -447,9 +434,9 @@ async function main() {
       type: 'Corrective',
       priority: 'High',
       status: 'In Progress',
-      reportedBy: users[1].id,
+      reportedBy: adminUser.id, // Use adminUser.id
       reportedAt: new Date('2023-07-01').toISOString(),
-      assignedTo: users[2].id,
+      assignedTo: adminUser.id, // Use adminUser.id
       assignedAt: new Date('2023-07-02').toISOString(),
       estimatedCompletion: new Date('2023-07-10').toISOString(),
       description: 'Centrifuge rotor is damaged and needs replacement.',
@@ -462,8 +449,7 @@ async function main() {
       completionNotes: null,
       completedAt: null,
       cost: null,
-      createdAt: new Date('2023-07-01').toISOString(),
-      updatedAt: new Date('2023-07-01').toISOString()
+      // createdAt and updatedAt will be handled by Prisma schema defaults
     }
   });
 
@@ -496,7 +482,7 @@ async function main() {
       equipmentId: microscopes[0].id,
       type: 'Preventive',
       description: 'Regular calibration and cleaning',
-      performedBy: users[2].id,
+      performedBy: adminUser.id, // Use adminUser.id
       date: '2023-06-15',
       cost: 500.00,
       partsUsed: 'Cleaning solution, calibration tools'
@@ -508,7 +494,7 @@ async function main() {
       equipmentId: centrifuges[0].id,
       type: 'Corrective',
       description: 'Rotor replacement',
-      performedBy: users[2].id,
+      performedBy: adminUser.id, // Use adminUser.id
       date: '2023-07-15',
       cost: 1200.00,
       partsUsed: 'New rotor'
@@ -522,7 +508,7 @@ async function main() {
       title: 'Monthly Equipment Performance Report',
       content: 'Detailed analysis of equipment performance and maintenance activities.',
       generatedAt: '2023-06-30',
-      generatedBy: users[0].id,
+      generatedBy: adminUser.id, // Use adminUser.id
       period: '2023-06',
       metrics: JSON.stringify({ uptime: '95%', maintenanceCost: 5000, issues: 3 })
     }
@@ -534,7 +520,7 @@ async function main() {
       title: 'Q2 Maintenance Budget Report',
       content: 'Overview of maintenance costs and budget allocation.',
       generatedAt: '2023-06-30',
-      generatedBy: users[0].id,
+      generatedBy: adminUser.id, // Use adminUser.id
       period: '2023-Q2',
       metrics: JSON.stringify({ totalCost: 15000, budget: 20000, variance: 5000 })
     }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // Added useAuth import
 import { equipmentApi, workOrdersApi, sparePartsApi } from '../services/api';
 
 interface Equipment {
@@ -18,14 +19,15 @@ interface SparePart {
 interface WorkOrderCreate {
   equipmentId: string;
   issue: string;
-  type: string;
-  assignedTo: string;
-  reportedBy: string;
-  sparePartsUsed?: { id: string; quantity: number }[];
+  type: string; // Will be set to 'Corrective'
+  assignedTo?: string; // Made optional, will be set to undefined
+  reportedBy: string; // Will be set from logged-in user
+  sparePartsNeeded?: string; // Changed from sparePartsUsed and type to string (JSON)
 }
 
 const NewWorkOrder: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get user from AuthContext
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState('');
@@ -59,15 +61,16 @@ const NewWorkOrder: React.FC = () => {
       const workOrderData: WorkOrderCreate = {
         equipmentId: selectedEquipment,
         issue,
-        type: 'maintenance',
-        assignedTo: '', // Will be assigned by the system
-        reportedBy: '', // Will be filled by the backend
-        sparePartsUsed: selectedSpareParts,
+        type: 'Corrective', // Hardcoded for Lab Tech reporting a fault
+        assignedTo: undefined, // Let backend or BME handle assignment
+        reportedBy: user?.username || 'Unknown User', // Set reportedBy from logged-in user
+        sparePartsNeeded: selectedSpareParts.length > 0 ? JSON.stringify(selectedSpareParts) : undefined,
       };
       await workOrdersApi.create(workOrderData);
-      navigate('/maintenance/work-orders');
+      navigate('/lab/dashboard'); // Updated navigation
     } catch (error) {
       console.error('Error creating work order:', error);
+      // Consider adding a toast notification for the error here
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +156,7 @@ const NewWorkOrder: React.FC = () => {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate('/maintenance/work-orders')}
+              onClick={() => navigate(-1)} // Go back to previous page or a specific lab page
               className="px-6 py-3 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
             >
               Cancel

@@ -31,6 +31,7 @@ model Equipment {
   contracts               Contract[]
   compliance              Compliance[]
   spareParts              SparePart[]
+  preventiveMaintenanceSchedules PreventiveMaintenanceSchedule[] // Added back-relation
 }
 
 model SparePart {
@@ -82,10 +83,13 @@ model Contract {
   vendor      String
   equipmentId String
   equipment   Equipment @relation(fields: [equipmentId], references: [id])
-  startDate   String
-  endDate     String
+  startDate   DateTime
+  endDate     DateTime
   details     String
-  status      String
+  status      String // e.g., "Active", "Expired", "Pending Renewal"
+  renewalReminderDate DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model MaintenanceHistory {
@@ -105,7 +109,7 @@ model Report {
   type        String   // "Performance", "Financial", "Compliance"
   title       String
   content     String
-  generatedAt String
+  generatedAt DateTime @default(now())
   generatedBy String
   period      String   // e.g., "2025-06"
   metrics     String   // JSON string of key metrics
@@ -143,4 +147,21 @@ model User {
   lastLogin     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  assignedPreventiveMaintenanceSchedules PreventiveMaintenanceSchedule[] // Added back-relation
+}
+
+model PreventiveMaintenanceSchedule {
+  id                  String    @id @default(uuid())
+  equipmentId         String
+  equipment           Equipment @relation(fields: [equipmentId], references: [id])
+  taskDescription     String
+  frequency           String    // "Daily", "Weekly", "Monthly", "Quarterly", "Annually"
+  nextDueDate         DateTime
+  lastGeneratedDate   DateTime?
+  isActive            Boolean   @default(true)
+  assignedToUserId    String?
+  assignedToUser      User?     @relation(fields: [assignedToUserId], references: [id])
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
