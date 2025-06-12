@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./cmms.db"
+}
+
+model Equipment {
+  id              String   @id @default(uuid())
+  serialNumber    String
+  model           String
+  location        String
+  purchaseDate    String
+  warrantyDetails String?
+  status          String   @default("Operational")
+  category        String   // e.g., "Microscope", "Analyzer", "Centrifuge"
+  manufacturer    String
+  lastMaintenance String?
+  nextMaintenance String?
+  maintenanceHistory MaintenanceHistory[]
+  workOrders      WorkOrder[]
+  contracts       Contract[]
+  compliance      Compliance[]
+  department      String
+  cost            Float?
+}
+
+model SparePart {
+  id          String   @id @default(uuid())
+  name        String
+  quantity    Int
+  threshold   Int
+  lastUpdated String
+  alert       String?
+  category    String
+  unitCost    Float
+  supplier    String?
+  location    String
+  minOrderQty Int
+  leadTime    Int    // in days
+}
+
+model WorkOrder {
+  id          String   @id @default(uuid())
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  issue       String
+  type        String
+  assignedTo  String
+  status      String   @default("Pending")
+  createdAt   String
+  reportedBy  String
+  actions     String?
+  completedAt String?
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  vendor      String
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  startDate   String
+  endDate     String
+  details     String
+  status      String
+}
+
+model MaintenanceHistory {
+  id          String   @id @default(uuid())
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  type        String   // "Preventive" or "Corrective"
+  description String
+  performedBy String
+  date        String
+  cost        Float?
+  partsUsed   String?
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  type        String   // "Performance", "Financial", "Compliance"
+  title       String
+  content     String
+  generatedAt String
+  generatedBy String
+  period      String   // e.g., "2025-06"
+  metrics     String   // JSON string of key metrics
+}
+
+model Budget {
+  id          String   @id @default(uuid())
+  year        String
+  month       String
+  category    String   // e.g., "Maintenance", "Parts", "Contracts"
+  allocated   Float
+  spent       Float
+  department  String
+}
+
+model Compliance {
+  id          String   @id @default(uuid())
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  standard    String
+  status      String
+  lastCheck   String
+  nextDue     String
+  notes       String?
+}
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  email         String   @unique
+  role          String   // "Admin", "Technician", "Engineer"
+  password      String
+  department    String?
+  permissions   String   // JSON string of specific permissions
+  lastLogin     String?
+  createdAt     String
+  updatedAt     String
+}
