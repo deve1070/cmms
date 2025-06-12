@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { Role, Permission } from '../config/permissions';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -8,8 +9,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 export interface AuthRequest extends Request {
   user?: {
     id: string;
-    role: string;
-    permissions: string[];
+    role: Role; // Updated to use Role enum
+    permissions: Permission[]; // Updated to use Permission enum array
   };
 }
 
@@ -37,8 +38,8 @@ export const authenticateToken = async (
 
     req.user = {
       id: user.id,
-      role: user.role,
-      permissions: JSON.parse(user.permissions)
+      role: user.role as Role, // Cast to Role enum
+      permissions: JSON.parse(user.permissions) as Permission[] // Cast to Permission enum array
     };
 
     next();
@@ -47,13 +48,13 @@ export const authenticateToken = async (
   }
 };
 
-export const checkRole = (roles: string[]) => {
+export const checkRole = (roles: Role[]) => { // Updated parameter type
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!req.user.role || !roles.includes(req.user.role)) { // Added null check for req.user.role
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
@@ -61,13 +62,13 @@ export const checkRole = (roles: string[]) => {
   };
 };
 
-export const checkPermission = (permission: string) => {
+export const checkPermission = (permission: Permission) => { // Updated parameter type
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (!req.user.permissions.includes(permission)) {
+    if (!req.user.permissions || !req.user.permissions.includes(permission)) { // Added null check for req.user.permissions
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 

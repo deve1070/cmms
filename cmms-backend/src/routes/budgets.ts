@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, checkRole } from '../middleware/auth';
+import { Role } from '../config/permissions';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Get budget overview
-router.get('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
+router.get('/', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const { year, month, department } = req.query;
     const budgets = await prisma.budget.findMany({
@@ -23,7 +24,7 @@ router.get('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req,
 });
 
 // Create new budget
-router.post('/', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.post('/', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { year, month, category, allocated, department } = req.body;
 
@@ -59,7 +60,7 @@ router.post('/', authenticateToken, checkRole(['Admin']), async (req, res) => {
 });
 
 // Update budget spending
-router.patch('/:id/spend', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.patch('/:id/spend', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     const { amount } = req.body;
@@ -86,7 +87,7 @@ router.patch('/:id/spend', authenticateToken, checkRole(['Admin']), async (req, 
 });
 
 // Get budget analytics
-router.get('/analytics', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.get('/analytics', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { year, department } = req.query;
 
@@ -120,7 +121,7 @@ router.get('/analytics', authenticateToken, checkRole(['Admin']), async (req, re
 });
 
 // Delete budget
-router.delete('/:id', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.budget.delete({

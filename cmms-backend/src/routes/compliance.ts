@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, checkRole } from '../middleware/auth';
+import { Role } from '../config/permissions';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Get compliance status
-router.get('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
+router.get('/', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const { equipmentId, standard, status } = req.query;
     const compliance = await prisma.compliance.findMany({
@@ -26,7 +27,7 @@ router.get('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req,
 });
 
 // Create compliance record
-router.post('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
+router.post('/', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const { equipmentId, standard, status, lastCheck, nextDue, notes } = req.body;
 
@@ -67,7 +68,7 @@ router.post('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req
 });
 
 // Update compliance status
-router.patch('/:id', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
+router.patch('/:id', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, lastCheck, nextDue, notes } = req.body;
@@ -110,7 +111,7 @@ router.patch('/:id', authenticateToken, checkRole(['Admin', 'Engineer']), async 
 });
 
 // Get compliance analytics
-router.get('/analytics', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.get('/analytics', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const compliance = await prisma.compliance.findMany({
       include: {
@@ -143,7 +144,7 @@ router.get('/analytics', authenticateToken, checkRole(['Admin']), async (req, re
 });
 
 // Delete compliance record
-router.delete('/:id', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.compliance.delete({

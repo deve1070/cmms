@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, checkRole } from '../middleware/auth';
+import { Role } from '../config/permissions';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -20,7 +21,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Create new contract
-router.post('/', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.post('/', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { vendor, equipmentId, startDate, endDate, details } = req.body;
 
@@ -52,7 +53,7 @@ router.post('/', authenticateToken, checkRole(['Admin']), async (req, res) => {
 });
 
 // Update contract
-router.put('/:id', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.put('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     const { vendor, equipmentId, startDate, endDate, details, status } = req.body;
@@ -78,7 +79,7 @@ router.put('/:id', authenticateToken, checkRole(['Admin']), async (req, res) => 
 });
 
 // Delete contract
-router.delete('/:id', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.contract.delete({

@@ -17,10 +17,14 @@ import {
   ExclamationTriangleIcon,
   UserGroupIcon,
   CurrencyDollarIcon,
+  CubeIcon, // Added
+  ClipboardDocumentListIcon, // Added
+  WrenchScrewdriverIcon, // Added
 } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { equipmentApi, workOrdersApi, maintenanceApi } from '../services/api';
+// Assuming contractsApi exists or will be created in src/services/api.ts
+import { equipmentApi, workOrdersApi, maintenanceApi, contractsApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 
 interface Equipment {
@@ -59,6 +63,16 @@ interface MaintenanceReport {
   };
 }
 
+// Added Contract interface (basic version)
+interface Contract {
+  id: string;
+  vendor: string;
+  equipmentId: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+}
+
 interface SidebarItem {
   name: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -67,10 +81,13 @@ interface SidebarItem {
 
 const sidebarItems: SidebarItem[] = [
   { name: 'Overview', icon: HomeIcon, path: '/biomedical/dashboard' },
-  { name: 'Equipment Calibration', icon: WrenchIcon, path: '/biomedical/calibration' },
-  { name: 'Compliance Checks', icon: CheckCircleIcon, path: '/biomedical/compliance' },
+  { name: 'Manage Equipment', icon: CubeIcon, path: '/biomedical/equipment' },
+  { name: 'View Compliance', icon: CheckCircleIcon, path: '/biomedical/compliance' },
+  { name: 'Work Orders', icon: DocumentTextIcon, path: '/biomedical/work-orders' },
+  { name: 'Contracts', icon: ClipboardDocumentListIcon, path: '/biomedical/contracts' },
+  { name: 'Spare Parts', icon: WrenchScrewdriverIcon, path: '/biomedical/spare-parts' },
   { name: 'Maintenance Reports', icon: ChartBarIcon, path: '/biomedical/reports' },
-  { name: 'Settings', icon: CogIcon, path: '/biomedical/settings' },
+  // Settings removed
 ];
 
 const BiomedicalEngineerDashboard: React.FC = () => {
@@ -80,6 +97,7 @@ const BiomedicalEngineerDashboard: React.FC = () => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [maintenanceReports, setMaintenanceReports] = useState<MaintenanceReport[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]); // Added state for contracts
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,15 +106,18 @@ const BiomedicalEngineerDashboard: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const [equipmentData, workOrdersData, reportsData] = await Promise.all([
+        // Placeholder for contracts fetching
+        const [equipmentData, workOrdersData, reportsData, contractsData] = await Promise.all([
           equipmentApi.getAll(),
           workOrdersApi.getAll(),
           maintenanceApi.getAll({}),
-        ]) as [Equipment[], WorkOrder[], MaintenanceReport[]];
+          contractsApi.getAll(), // Added contracts API call
+        ]) as [Equipment[], WorkOrder[], MaintenanceReport[], Contract[]];
 
         setEquipment(equipmentData);
         setWorkOrders(workOrdersData);
         setMaintenanceReports(reportsData);
+        setContracts(contractsData); // Set contracts data
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setError('Failed to load dashboard data. Please try again later.');
@@ -227,6 +248,61 @@ const BiomedicalEngineerDashboard: React.FC = () => {
 
         {/* Body */}
         <main className="p-6 space-y-8">
+          {/* Quick Actions */}
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                onClick={() => navigate('/biomedical/equipment/new')}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center space-x-2"
+              >
+                <CubeIcon className="h-5 w-5" />
+                <span>Add New Equipment</span>
+              </button>
+              <button
+                onClick={() => navigate('/biomedical/work-orders/new')}
+                className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center space-x-2"
+              >
+                <DocumentTextIcon className="h-5 w-5" />
+                <span>Create Work Order</span>
+              </button>
+              <button
+                onClick={() => navigate('/biomedical/spare-parts')}
+                className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center space-x-2"
+              >
+                <WrenchScrewdriverIcon className="h-5 w-5" />
+                <span>Manage Spare Parts</span>
+              </button>
+            </div>
+          </section>
+
+          {/* Dashboard Stats */}
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview Statistics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <h3 className="text-sm font-medium text-gray-500">Total Equipment</h3>
+                <p className="mt-1 text-3xl font-semibold text-gray-900">{equipment.length}</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <h3 className="text-sm font-medium text-gray-500">Open Work Orders</h3>
+                <p className="mt-1 text-3xl font-semibold text-gray-900">
+                  {workOrders.filter(wo => wo.status === 'pending' || wo.status === 'in_progress').length}
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <h3 className="text-sm font-medium text-gray-500">Equipment Nearing Warranty End</h3>
+                {/* TODO: Implement data fetching for warranty end */}
+                <p className="mt-1 text-3xl font-semibold text-gray-900">N/A</p>
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <h3 className="text-sm font-medium text-gray-500">Pending Contract Renewals</h3>
+                {/* TODO: Implement data fetching for contract renewals */}
+                <p className="mt-1 text-3xl font-semibold text-gray-900">N/A</p>
+              </div>
+            </div>
+          </section>
+
           {/* Equipment Status */}
           <section className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Equipment Status</h2>

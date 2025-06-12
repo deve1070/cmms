@@ -75,7 +75,7 @@ const sidebarItems: SidebarItem[] = [
   { name: 'Dashboard', icon: ChartBarIcon, path: '/lab/dashboard' },
   { name: 'Report Issue', icon: ExclamationTriangleIcon, path: '/lab/report-issue' },
   { name: 'Equipment Status', icon: BeakerIcon, path: '/lab/equipment' },
-  { name: 'Maintenance Reports', icon: ClipboardDocumentCheckIcon, path: '/lab/reports' },
+  { name: 'My Reported Issues', icon: ClipboardDocumentCheckIcon, path: '/lab/reports' }, // Changed name
 ];
 
 const LabTechDashboard: React.FC = () => {
@@ -225,6 +225,36 @@ const LabTechDashboard: React.FC = () => {
             </div>
           ) : (
             <>
+              {/* Dashboard Stats */}
+              <section className="mb-8">
+                <h2 className="text-2xl font-semibold text-blue-900 mb-6">My Overview</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-blue-100">
+                    <h3 className="text-sm font-medium text-gray-500">Equipment In My Department</h3>
+                    {/* TODO: Filter equipment based on Lab Tech's department/location, or fetch department-specific equipment. */}
+                    <p className="mt-1 text-3xl font-semibold text-blue-900">N/A</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-blue-100">
+                    <h3 className="text-sm font-medium text-gray-500">My Open Reported Issues</h3>
+                    <p className="mt-1 text-3xl font-semibold text-blue-900">
+                      {
+                        workOrders.filter(
+                          (wo) =>
+                            wo.reportedBy === user?.username && // Or user?.id if that's what reportedBy stores
+                            wo.status !== 'completed' &&
+                            wo.status !== 'cancelled'
+                        ).length
+                      }
+                    </p>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-blue-100">
+                    <h3 className="text-sm font-medium text-gray-500">Recently Serviced Equipment (My Dept)</h3>
+                    {/* TODO: Implement logic to count equipment in user's dept with recent 'completed' maintenance. */}
+                    <p className="mt-1 text-3xl font-semibold text-blue-900">N/A</p>
+                  </div>
+                </div>
+              </section>
+
               {/* Quick Actions */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <button

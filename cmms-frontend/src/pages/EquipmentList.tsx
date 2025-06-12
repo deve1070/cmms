@@ -7,55 +7,74 @@ import {
   FunnelIcon,
 } from '@heroicons/react/24/outline';
 
+// TODO: Move to a shared types file
 interface Equipment {
   id: string;
   serialNumber: string;
-  model: string;
-  location: string;
-  status: string;
-  lastMaintenance: string;
-  nextMaintenance: string;
+  manufacturerName: string;
+  modelNumber: string;
+  manufacturerServiceNumber?: string | null;
+  vendorName?: string | null;
+  vendorCode?: string | null;
+  locationDescription: string;
+  locationCode?: string | null;
+  purchasePrice: number;
+  installationDate: string;
+  warrantyExpirationDate: string;
+  status: 'Operational' | 'Needs Maintenance' | 'Out of Service' | 'Decommissioned';
+  category: string;
+  department: string;
+  lastMaintenance?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const EquipmentList: React.FC = () => {
   const navigate = useNavigate();
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]); // Renamed state variable
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    const fetchEquipment = async () => {
+    const fetchEquipmentList = async () => { // Renamed function
       try {
         setIsLoading(true);
-        const data = await equipmentApi.getAll() as Equipment[];
-        setEquipment(data);
+        const data = await equipmentApi.getAll() as Equipment[]; // Assuming getAll returns data matching the new interface
+        setEquipmentList(data);
       } catch (error) {
-        console.error('Error fetching equipment:', error);
+        console.error('Error fetching equipment list:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchEquipment();
+    fetchEquipmentList();
   }, []);
 
-  const filteredEquipment = equipment.filter(item => {
-    const matchesSearch = item.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.location.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredEquipment = equipmentList.filter(item => { // Changed to equipmentList
+    const searchString = searchTerm.toLowerCase();
+    const matchesSearch =
+      item.modelNumber.toLowerCase().includes(searchString) ||
+      item.serialNumber.toLowerCase().includes(searchString) ||
+      item.manufacturerName.toLowerCase().includes(searchString) ||
+      item.locationDescription.toLowerCase().includes(searchString) ||
+      item.category.toLowerCase().includes(searchString) ||
+      item.department.toLowerCase().includes(searchString);
     const matchesStatus = filterStatus === 'all' || item.status.toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'operational':
+  const getStatusColor = (status: Equipment['status']) => { // Typed status parameter
+    switch (status) {
+      case 'Operational':
         return 'bg-green-100 text-green-800';
-      case 'needs calibration':
+      case 'Needs Maintenance':
         return 'bg-yellow-100 text-yellow-800';
-      case 'maintenance due':
+      case 'Out of Service':
         return 'bg-red-100 text-red-800';
+      case 'Decommissioned':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -66,7 +85,7 @@ const EquipmentList: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Equipment List</h1>
         <button
-          onClick={() => navigate('/maintenance/equipment/new')}
+          onClick={() => navigate('/equipment/new')} // Updated navigation path
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <PlusIcon className="h-5 w-5 mr-2 stroke-1" />
@@ -112,36 +131,33 @@ const EquipmentList: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manufacturer</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial No.</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Maintenance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next Maintenance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Date</th>
+                  {/* Removed last/next maintenance for brevity, can be added back if needed */}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredEquipment.map((item) => (
                   <tr
                     key={item.id}
-                    onClick={() => navigate(`/maintenance/equipment/${item.id}`)}
+                    onClick={() => navigate(`/equipment/edit/${item.id}`)} // Updated navigation path
                     className="hover:bg-gray-50 cursor-pointer"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">{item.model}</span>
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.manufacturerName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.modelNumber}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.serialNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.location}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.locationDescription}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}`}>
                         {item.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.lastMaintenance).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.nextMaintenance).toLocaleDateString()}
+                      {new Date(item.installationDate).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}

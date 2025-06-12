@@ -22,7 +22,9 @@ import {
   WrenchScrewdriverIcon,
   ArrowRightOnRectangleIcon,
   ClipboardDocumentCheckIcon,
-  CogIcon,
+  // CogIcon, // Removed as it's no longer used
+  ArchiveBoxArrowDownIcon, // Added for Quick Actions
+  PaperAirplaneIcon, // Added for Quick Actions
 } from '@heroicons/react/24/outline';
 
 interface SidebarItem {
@@ -77,9 +79,9 @@ interface SparePart {
 const sidebarItems: SidebarItem[] = [
   { name: 'Dashboard', icon: ChartBarIcon, path: '/maintenance/dashboard' },
   { name: 'My Work Orders', icon: WrenchIcon, path: '/maintenance/work-orders' },
-  { name: 'Maintenance Schedule', icon: CalendarIcon, path: '/maintenance/schedule' },
-  { name: 'Spare Parts', icon: CogIcon, path: '/maintenance/spare-parts' },
-  { name: 'Reports', icon: ClipboardDocumentCheckIcon, path: '/maintenance/reports' },
+  { name: 'View Schedule', icon: CalendarIcon, path: '/maintenance/schedule' },
+  { name: 'Spare Parts Inventory', icon: WrenchScrewdriverIcon, path: '/maintenance/spare-parts' },
+  { name: 'My Activity Log', icon: ClipboardDocumentCheckIcon, path: '/maintenance/activity-log' },
 ];
 
 const MaintenanceTechDashboard: React.FC = () => {
@@ -93,45 +95,45 @@ const MaintenanceTechDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Add a debug message to verify component mounting
-  console.log('MaintenanceTechDashboard component mounted');
-  console.log('Current state:', { isLoading, error, user });
+  // console.log('MaintenanceTechDashboard component mounted'); // Removed as per instruction
+  // console.log('Current state:', { isLoading, error, user }); // Removed
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        console.log('Starting to fetch dashboard data...');
+        // console.log('Starting to fetch dashboard data...'); // Removed
         setIsLoading(true);
         setError(null);
 
         // Fetch data in parallel
-        console.log('Fetching equipment data...');
+        // console.log('Fetching equipment data...'); // Removed
         const equipmentResponse = await equipmentApi.getAll().catch(err => {
-          console.error('Error fetching equipment:', err);
+          console.error('Error fetching equipment:', err); // Kept error log
           return [] as Equipment[];
         }) as Equipment[];
-        console.log('Equipment data:', equipmentResponse);
+        // console.log('Equipment data:', equipmentResponse); // Removed
 
-        console.log('Fetching work orders data...');
+        // console.log('Fetching work orders data...'); // Removed
         const workOrdersResponse = await workOrdersApi.getAll().catch(err => {
-          console.error('Error fetching work orders:', err);
+          console.error('Error fetching work orders:', err); // Kept error log
           return [] as WorkOrder[];
         }) as WorkOrder[];
-        console.log('Work orders data:', workOrdersResponse);
+        // console.log('Work orders data:', workOrdersResponse); // Removed
+        // TODO: If backend supports, filter work orders by assignee upon fetch. Otherwise, filter here if `assignedTo` field is available and matches current user.
 
-        console.log('Fetching maintenance schedules data...');
+        // console.log('Fetching maintenance schedules data...'); // Removed
         const maintenanceResponse = await maintenanceApi.getAll({}).catch(err => {
-          console.error('Error fetching maintenance schedules:', err);
+          console.error('Error fetching maintenance schedules:', err); // Kept error log
           return [] as MaintenanceSchedule[];
         }) as MaintenanceSchedule[];
-        console.log('Maintenance schedules data:', maintenanceResponse);
+        // console.log('Maintenance schedules data:', maintenanceResponse); // Removed
 
-        console.log('Fetching spare parts data...');
+        // console.log('Fetching spare parts data...'); // Removed
         const sparePartsResponse = await sparePartsApi.getAll().catch(err => {
-          console.error('Error fetching spare parts:', err);
+          console.error('Error fetching spare parts:', err); // Kept error log
           return [] as SparePart[];
         }) as SparePart[];
-        console.log('Spare parts data:', sparePartsResponse);
+        // console.log('Spare parts data:', sparePartsResponse); // Removed
 
         setEquipment(equipmentResponse);
         setWorkOrders(workOrdersResponse);
@@ -139,19 +141,20 @@ const MaintenanceTechDashboard: React.FC = () => {
         setSpareParts(sparePartsResponse);
 
         // Show success message if any data was loaded
-        if (
-          equipmentResponse.length ||
-          workOrdersResponse.length ||
-          maintenanceResponse.length ||
-          sparePartsResponse.length
-        ) {
-          toast.success('Dashboard data loaded successfully');
-        } else {
-          console.log('No data was loaded from any API endpoint');
-          setError('No data available. Please try again later.');
-        }
+        // if ( // Simplified toast logic, assuming some data is usually expected.
+        //   equipmentResponse.length ||
+        //   workOrdersResponse.length ||
+        //   maintenanceResponse.length ||
+        //   sparePartsResponse.length
+        // ) {
+        //   toast.success('Dashboard data loaded successfully');
+        // } else {
+        //   console.log('No data was loaded from any API endpoint');
+        //   setError('No data available. Please try again later.');
+        // }
+        toast.success('Dashboard data refreshed'); // Restored a generic success toast
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Error fetching dashboard data:', error); // Kept error log
         setError('Failed to load dashboard data. Please try again later.');
         toast.error('Failed to load dashboard data');
       } finally {
@@ -204,44 +207,38 @@ const MaintenanceTechDashboard: React.FC = () => {
     );
   }
 
-  // Add a debug message before the main render
-  console.log('Rendering main dashboard content');
+  // console.log('Rendering main dashboard content'); // Removed
 
   const handleLogout = async () => {
     try {
       await logout();
       navigate('/login', { replace: true });
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Error during logout:', error); // Kept error log
       toast.error('Failed to logout');
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    try {
-      switch (action) {
-        case 'view-schedule':
-          navigate('/maintenance/schedule');
-          break;
-        case 'update-spare-parts':
-          navigate('/maintenance/spare-parts');
-          break;
-        default:
-          console.warn('Unknown action:', action);
-      }
-    } catch (error) {
-      console.error('Error handling quick action:', error);
-      toast.error('Failed to perform action');
-    }
-  };
+  // const handleQuickAction = (action: string) => { // Old handler removed
+  //   try {
+  //     switch (action) {
+  //       case 'view-schedule':
+  //         navigate('/maintenance/schedule');
+  //         break;
+  //       case 'update-spare-parts':
+  //         navigate('/maintenance/spare-parts');
+  //         break;
+  //       default:
+  //         console.warn('Unknown action:', action);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error handling quick action:', error);
+  //     toast.error('Failed to perform action');
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Debug info */}
-      <div className="fixed top-0 right-0 p-2 bg-black/50 text-white text-xs z-50">
-        Debug: Component rendered
-      </div>
-
       {/* Sidebar */}
       <motion.div
         initial={{ x: -280 }}
@@ -325,26 +322,58 @@ const MaintenanceTechDashboard: React.FC = () => {
 
         {/* Dashboard Content */}
         <main className="p-6">
+          {/* Dashboard Stats */}
+          <section className="mb-8">
+            <h2 className="text-xl font-bold text-blue-900 mb-4">My Performance Overview</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100">
+                <h3 className="text-sm font-medium text-gray-500">My Open Work Orders</h3>
+                {/* Assuming user.username or user.id is available for matching assignedTo */}
+                <p className="mt-1 text-3xl font-semibold text-blue-900">
+                  {workOrders.filter(wo => wo.assignedTo === user?.username && (wo.status === 'pending' || wo.status === 'in_progress')).length}
+                </p>
+              </div>
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100">
+                <h3 className="text-sm font-medium text-gray-500">Tasks Completed This Week</h3>
+                {/* Implement logic to count tasks completed by this user this week. */}
+                <p className="mt-1 text-3xl font-semibold text-blue-900">N/A</p>
+              </div>
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100">
+                <h3 className="text-sm font-medium text-gray-500">Low Stock Alerts</h3>
+                <p className="mt-1 text-3xl font-semibold text-red-600">
+                  {spareParts.filter(part => part.quantity <= part.minimumQuantity).length}
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Quick Actions */}
-          <div className="mb-8">
+          <section className="mb-8">
             <h2 className="text-xl font-bold text-blue-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <button
-                onClick={() => handleQuickAction('view-schedule')}
-                className="flex items-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-100"
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <button
+                onClick={() => navigate('/maintenance/work-orders')}
+                className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
               >
-                <CalendarIcon className="h-6 w-6 text-blue-600" />
-                <span className="font-medium text-blue-900">View Schedule</span>
+                <ClipboardDocumentListIcon className="h-6 w-6" />
+                <span className="font-medium">View My Work Orders</span>
               </button>
               <button
-                onClick={() => handleQuickAction('update-spare-parts')}
-                className="flex items-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-100"
+                onClick={() => navigate('/maintenance/spare-parts')} // Navigate to spare parts, specific log page can be sub-route
+                className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
               >
-                <CogIcon className="h-6 w-6 text-blue-600" />
-                <span className="font-medium text-blue-900">Update Spare Parts</span>
+                <ArchiveBoxArrowDownIcon className="h-6 w-6" />
+                <span className="font-medium">Log Part Usage</span>
+              </button>
+              <button
+                onClick={() => navigate('/maintenance/spare-parts')} // Navigate to spare parts, specific request page can be sub-route
+                className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
+              >
+                <PaperAirplaneIcon className="h-6 w-6" />
+                <span className="font-medium">Request Part Restock</span>
               </button>
             </div>
-          </div>
+          </section>
 
           {/* Work Orders Section */}
           <div className="mb-8">
@@ -359,9 +388,11 @@ const MaintenanceTechDashboard: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
+                    {/* TODO: Filter these work orders to show only those assigned to the current technician OR clearly indicate if these are all recent WOs in the system. */}
                     {workOrders.slice(0, 5).map((order) => (
                       <tr key={order.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-900">{order.id}</td>
@@ -380,6 +411,14 @@ const MaintenanceTechDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(order.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => navigate(`/maintenance/work-orders/${order.id}`)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            Details
+                          </button>
                         </td>
                       </tr>
                     ))}

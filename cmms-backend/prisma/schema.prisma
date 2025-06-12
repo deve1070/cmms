@@ -136,11 +136,11 @@ model User {
   id            String   @id @default(uuid())
   username      String   @unique
   email         String   @unique
-  role          String   // "Admin", "Technician", "Engineer"
+  role          String   // "Admin", "Technician", "Engineer", "LabTechnician"
   password      String
   department    String?
   permissions   String   // JSON string of specific permissions
   lastLogin     String?
-  createdAt     String
-  updatedAt     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

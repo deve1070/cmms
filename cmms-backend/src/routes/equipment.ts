@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, checkRole } from '../middleware/auth';
+import { Role } from '../config/permissions';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -45,7 +46,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create new equipment
-router.post('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
+router.post('/', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const equipment = await prisma.equipment.create({
       data: {
@@ -73,7 +74,7 @@ router.post('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req
 });
 
 // Update equipment
-router.put('/:id', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
+router.put('/:id', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const equipment = await prisma.equipment.update({
       where: { id: req.params.id },
@@ -102,7 +103,7 @@ router.put('/:id', authenticateToken, checkRole(['Admin', 'Engineer']), async (r
 });
 
 // Delete equipment
-router.delete('/:id', authenticateToken, checkRole(['Admin']), async (req, res) => {
+router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -187,7 +188,7 @@ router.post('/:id/maintenance', authenticateToken, async (req, res) => {
     // Update equipment's last maintenance date
     await prisma.equipment.update({
       where: { id },
-      data: { }
+      data: { lastMaintenance: new Date(date) }
     });
 
     res.json(maintenance);
