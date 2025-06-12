@@ -1,240 +1,349 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { equipmentApi, workOrdersApi } from '../services/api';
+import { equipmentApi, workOrdersApi, maintenanceApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
   BeakerIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
+  ChartBarIcon,
+  UserCircleIcon,
+  ArrowLeftOnRectangleIcon,
+  BellIcon,
   ClockIcon,
-  ArrowPathIcon,
+  CheckCircleIcon,
+  CalendarIcon,
+  PlusIcon,
+  Bars3Icon,
+  XMarkIcon,
+  ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 
-interface DashboardStats {
-  totalEquipment: number;
-  activeEquipment: number;
-  pendingWorkOrders: number;
-  completedWorkOrders: number;
-  recentIssues: {
-    id: string;
-    equipmentId: string;
-    issue: string;
-    status: string;
-    createdAt: string;
-  }[];
+interface SidebarItem {
+  name: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  path: string;
 }
 
 interface Equipment {
   id: string;
+  inventoryNumber: string;
+  manufacturerName: string;
+  modelNumber: string;
+  manufacturerServiceNumber: string;
+  vendorName: string;
+  vendorCode: string;
+  locationDescription: string;
+  locationCode: string;
+  purchasePrice: number;
+  installationDate: string;
+  warrantyExpirationDate: string;
   status: string;
+  category: string;
+  department: string;
+  lastMaintenance: string;
+  nextMaintenance: string;
 }
 
 interface WorkOrder {
   id: string;
   equipmentId: string;
   issue: string;
-  status: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  assignedTo: string;
+  reportedBy: string;
   createdAt: string;
+  updatedAt: string;
 }
 
+interface MaintenanceReport {
+  id: string;
+  equipmentId: string;
+  type: 'preventive' | 'corrective';
+  status: 'pending' | 'in_progress' | 'completed';
+  description: string;
+  date: string;
+  equipment: {
+    model: string;
+    serialNumber: string;
+    location: string;
+  };
+}
+
+const sidebarItems: SidebarItem[] = [
+  { name: 'Dashboard', icon: ChartBarIcon, path: '/lab/dashboard' },
+  { name: 'Report Issue', icon: ExclamationTriangleIcon, path: '/lab/report-issue' },
+  { name: 'Equipment Status', icon: BeakerIcon, path: '/lab/equipment' },
+  { name: 'Maintenance Reports', icon: ClipboardDocumentCheckIcon, path: '/lab/reports' },
+];
+
 const LabTechDashboard: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalEquipment: 0,
-    activeEquipment: 0,
-    pendingWorkOrders: 0,
-    completedWorkOrders: 0,
-    recentIssues: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [maintenanceReports, setMaintenanceReports] = useState<MaintenanceReport[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const [equipmentData, workOrdersData, reportsData] = await Promise.all([
+          equipmentApi.getAll(),
+          workOrdersApi.getAll(),
+          maintenanceApi.getAll({}),
+        ]) as [Equipment[], WorkOrder[], MaintenanceReport[]];
+
+        setEquipment(equipmentData);
+        setWorkOrders(workOrdersData);
+        setMaintenanceReports(reportsData);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setError('Failed to load dashboard data. Please try again later.');
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      const [equipment, workOrders] = await Promise.all([
-        equipmentApi.getAll() as Promise<Equipment[]>,
-        workOrdersApi.getAll() as Promise<WorkOrder[]>,
-      ]);
-
-      const activeEquipment = equipment.filter(eq => eq.status === 'active').length;
-      const pendingWorkOrders = workOrders.filter(wo => wo.status === 'pending').length;
-      const completedWorkOrders = workOrders.filter(wo => wo.status === 'completed').length;
-      const recentIssues = workOrders
-        .slice(0, 5)
-        .map(wo => ({
-          id: wo.id,
-          equipmentId: wo.equipmentId,
-          issue: wo.issue,
-          status: wo.status,
-          createdAt: wo.createdAt,
-        }));
-
-      setStats({
-        totalEquipment: equipment.length,
-        activeEquipment,
-        pendingWorkOrders,
-        completedWorkOrders,
-        recentIssues,
-      });
-    } catch (error) {
-      toast.error('Failed to fetch dashboard data');
-    } finally {
-      setLoading(false);
-    }
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'completed':
-        return 'text-green-600 bg-green-100';
-      case 'in_progress':
-        return 'text-blue-600 bg-blue-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'report-issue':
+        navigate('/lab/report-issue');
+        break;
+      case 'view-equipment':
+        navigate('/lab/equipment');
+        break;
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Lab Technician Dashboard</h1>
-        <button
-          onClick={() => fetchDashboardData()}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <ArrowPathIcon className="h-5 w-5 mr-2" />
-          Refresh
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Equipment Stats */}
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <BeakerIcon className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Equipment</dt>
-                  <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">{stats.totalEquipment}</div>
-                  </dd>
-                </dl>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Sidebar */}
+      <motion.div
+        initial={{ x: -280 }}
+        animate={{ x: isSidebarOpen ? 0 : -280 }}
+        transition={{ duration: 0.3 }}
+        className="fixed top-0 left-0 h-full w-72 bg-white/90 backdrop-blur-lg shadow-2xl z-30 border-r border-blue-100"
+      >
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-2">
+              <BeakerIcon className="h-8 w-8 text-blue-600 drop-shadow" />
+              <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Laboratory</h2>
             </div>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
+              aria-label="Close sidebar"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
           </div>
-        </div>
-
-        {/* Active Equipment */}
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircleIcon className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Equipment</dt>
-                  <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">{stats.activeEquipment}</div>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pending Work Orders */}
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ClockIcon className="h-6 w-6 text-yellow-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Work Orders</dt>
-                  <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">{stats.pendingWorkOrders}</div>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Completed Work Orders */}
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircleIcon className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Completed Work Orders</dt>
-                  <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">{stats.completedWorkOrders}</div>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Issues */}
-      <div className="mt-8">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Issues</h2>
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200">
-            {stats.recentIssues.map((issue) => (
-              <li key={issue.id}>
-                <div className="px-4 py-4 sm:px-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400 mr-2" />
-                      <p className="text-sm font-medium text-blue-600 truncate">
-                        Equipment ID: {issue.equipmentId}
-                      </p>
-                    </div>
-                    <div className="ml-2 flex-shrink-0 flex">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(issue.status)}`}>
-                        {issue.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-2 sm:flex sm:justify-between">
-                    <div className="sm:flex">
-                      <p className="flex items-center text-sm text-gray-500">
-                        {issue.issue}
-                      </p>
-                    </div>
-                    <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                      <p>
-                        Reported: {new Date(issue.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </li>
+          <nav className="space-y-2">
+            {sidebarItems.map((item) => (
+              <button
+                key={item.name}
+                onClick={() => navigate(item.path)}
+                className="flex items-center space-x-3 w-full p-3 rounded-xl text-blue-800 font-medium hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 hover:text-purple-700 transition-all shadow-sm"
+              >
+                <item.icon className="h-6 w-6" />
+                <span>{item.name}</span>
+              </button>
             ))}
-          </ul>
+          </nav>
+        </div>
+        
+        <div className="absolute bottom-0 w-full p-6 border-t border-blue-100 bg-white/80 backdrop-blur">
+          <div className="flex items-center space-x-3 mb-4">
+            <UserCircleIcon className="h-8 w-8 text-blue-400" />
+            <div>
+              <p className="font-semibold text-blue-900">{user?.username || "Lab User"}</p>
+              <p className="text-xs text-blue-500">Laboratory Technician</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center space-x-3 w-full p-3 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all font-semibold shadow-sm"
+          >
+            <ArrowLeftOnRectangleIcon className="h-6 w-6" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${isSidebarOpen ? 'ml-72' : 'ml-0'}`}>
+        <div className="p-8">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
+                aria-label="Open sidebar"
+              >
+                <Bars3Icon className="h-6 w-6" />
+              </button>
+              <h1 className="text-3xl font-bold text-blue-900">Dashboard</h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors">
+                <BellIcon className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+              <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h3>
+              <p className="text-red-600">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Quick Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <button
+                  onClick={() => handleQuickAction('report-issue')}
+                  className="p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-100"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-red-100 rounded-lg">
+                      <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-blue-900">Report Issue</h3>
+                      <p className="text-sm text-blue-600">Report equipment failure or problem</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleQuickAction('view-equipment')}
+                  className="p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-100"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <BeakerIcon className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-blue-900">Equipment Status</h3>
+                      <p className="text-sm text-blue-600">View equipment status and maintenance</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Equipment Status Section */}
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-blue-900">Equipment Status</h2>
+                  <button
+                    onClick={() => navigate('/lab/equipment')}
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    View All
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {equipment.slice(0, 5).map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-lg border border-blue-100 hover:border-blue-200 transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-blue-900">{item.manufacturerName} {item.modelNumber}</h3>
+                          <p className="text-sm text-blue-600">Inventory #: {item.inventoryNumber}</p>
+                          <p className="text-sm text-blue-600">Location: {item.locationDescription} ({item.locationCode})</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          item.status === 'Operational' ? 'bg-green-100 text-green-800' :
+                          item.status === 'Needs Maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-blue-600">
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 mr-1" />
+                          <span>Installed: {new Date(item.installationDate).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <ClockIcon className="h-4 w-4 mr-1" />
+                          <span>Warranty: {new Date(item.warrantyExpirationDate).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Maintenance Reports */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-blue-900">Recent Maintenance Reports</h2>
+                  <button
+                    onClick={() => navigate('/lab/reports')}
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    View All
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {maintenanceReports.slice(0, 5).map((report) => (
+                    <div
+                      key={report.id}
+                      className="p-4 rounded-lg border border-blue-100 hover:border-blue-200 transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-blue-900">{report.equipment.model}</h3>
+                          <p className="text-sm text-blue-600">{report.description}</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          report.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          report.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {report.status ? report.status.replace('_', ' ') : 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center text-sm text-blue-600">
+                        <ClockIcon className="h-4 w-4 mr-1" />
+                        <span>Date: {new Date(report.date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

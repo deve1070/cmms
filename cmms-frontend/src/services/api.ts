@@ -4,8 +4,10 @@ import { Budget } from '../types/budget';
 import { ComplianceRequirement } from '../types/compliance';
 import { Contract } from '../types/contract';
 
+const API_URL = 'http://localhost:3000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,61 +23,74 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Login function
 export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
-  const response = await api.post<LoginResponse>('/login', credentials);
+  const response = await api.post<LoginResponse>('/auth/login', credentials);
   return response.data;
 };
 
 // Equipment API
 export const equipmentApi = {
-  getAll: () => api.get('/equipment').then(res => res.data),
-  getById: (id: string) => api.get(`/equipment/${id}`).then(res => res.data),
-  create: (data: {
-    serialNumber: string;
-    model: string;
-    location: string;
-    purchaseDate: string;
-    warrantyDetails: string;
-    category: string;
-    manufacturer: string;
-    department: string;
-    cost: number;
-    status: string;
-  }) => api.post('/equipment', data).then(res => res.data),
-  update: (id: string, data: {
-    serialNumber?: string;
-    model?: string;
-    location?: string;
-    purchaseDate?: string;
-    warrantyDetails?: string;
-    category?: string;
-    manufacturer?: string;
-    department?: string;
-    cost?: number;
-    status?: string;
-  }) => api.put(`/equipment/${id}`, data).then(res => res.data),
-  delete: (id: string) => api.delete(`/equipment/${id}`).then(res => res.data)
+  getAll: async () => {
+    const response = await api.get('/equipment');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/equipment/${id}`);
+    return response.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/equipment', data);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/equipment/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/equipment/${id}`);
+    return response.data;
+  },
+  getMaintenanceHistory: async (id: string) => {
+    const response = await api.get(`/equipment/${id}/maintenance`);
+    return response.data;
+  },
 };
 
 // Work Orders API
 export const workOrdersApi = {
-  getAll: () => api.get('/work-orders').then(res => res.data),
-  getById: (id: string) => api.get(`/work-orders/${id}`).then(res => res.data),
-  create: (data: {
-    equipmentId: string;
-    issue: string;
-    type: string;
-    assignedTo: string;
-    reportedBy: string;
-    actions?: string;
-  }) => api.post('/work-orders', data).then(res => res.data),
-  update: (id: string, data: {
-    status?: string;
-    actions?: string;
-    completedAt?: string;
-  }) => api.put(`/work-orders/${id}`, data).then(res => res.data),
-  delete: (id: string) => api.delete(`/work-orders/${id}`).then(res => res.data)
+  getAll: async () => {
+    const response = await api.get('/work-orders');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/work-orders/${id}`);
+    return response.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/work-orders', data);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/work-orders/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/work-orders/${id}`);
+    return response.data;
+  },
 };
 
 // Reports API
@@ -135,16 +150,26 @@ export const usersApi = {
 
 // Maintenance History API
 export const maintenanceApi = {
-  getAll: (params: { equipmentId?: string }) =>
-    api.get('/equipment/maintenance', { params }).then(res => res.data),
-  create: (equipmentId: string, data: {
-    type: string;
-    description: string;
-    performedBy: string;
-    date: string;
-    cost?: number;
-    partsUsed?: string;
-  }) => api.post(`/equipment/${equipmentId}/maintenance`, data).then(res => res.data)
+  getAll: async (params: any) => {
+    const response = await api.get('/maintenance', { params });
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/maintenance/${id}`);
+    return response.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/maintenance', data);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/maintenance/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/maintenance/${id}`);
+    return response.data;
+  },
 };
 
 // Spare Parts API

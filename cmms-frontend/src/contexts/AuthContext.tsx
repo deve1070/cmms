@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { User, LoginCredentials, AuthState } from '../types/auth';
 import { login as apiLogin } from '../services/api';
 
@@ -16,9 +16,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // Initialize auth state from localStorage
   useEffect(() => {
-    // Check for stored token and user data
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
@@ -28,7 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(parsedUser);
         setIsAuthenticated(true);
       } catch (e) {
-        // If there's an error parsing the stored user, clear the storage
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
@@ -36,7 +36,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  // Handle navigation based on auth state
+  useEffect(() => {
+    if (!isLoading) {
+      const currentPath = location.pathname;
+      const isPublicRoute = ['/login', '/welcome'].includes(currentPath);
+
+      if (!isAuthenticated && !isPublicRoute) {
+        navigate('/login', { replace: true });
+      } else if (isAuthenticated && isPublicRoute) {
+        const userRole = user?.role.toLowerCase();
+        const dashboardPath = userRole === 'admin' ? '/admin/dashboard' :
+                            userRole === 'engineer for maintenance' ? '/maintenance/dashboard' :
+                            userRole === 'laboratory technician' ? '/lab/dashboard' :
+                            userRole === 'biomedical engineer' ? '/biomedical/dashboard' :
+                            '/welcome';
+        navigate(dashboardPath, { replace: true });
+      }
+    }
+  }, [isAuthenticated, isLoading, location.pathname, navigate, user?.role]);
+
+  const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -48,36 +68,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(user);
       setIsAuthenticated(true);
-      
-      // Redirect based on user role
-      switch (user.role.toLowerCase()) {
-        case 'admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'maintenance':
-          navigate('/maintenance/dashboard');
-          break;
-        case 'labtech':
-          navigate('/lab/dashboard');
-          break;
-        default:
-          navigate('/dashboard');
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/login');
-  };
+    navigate('/login', { replace: true });
+  }, [navigate]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, isLoading, error, login, logout }}>

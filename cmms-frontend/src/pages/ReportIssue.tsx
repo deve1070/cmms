@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 import { equipmentApi, workOrdersApi } from '../services/api';
+import { toast } from 'react-hot-toast';
+import { 
+  WrenchScrewdriverIcon,
+  DocumentTextIcon,
+  ArrowLeftIcon,
+  CheckCircleIcon
+} from '@heroicons/react/24/outline';
 
 interface Equipment {
   id: string;
@@ -12,28 +18,35 @@ interface Equipment {
   status: string;
 }
 
+interface WorkOrder {
+  id: string;
+  equipmentId: string;
+  issue: string;
+  type: string;
+  status: string;
+  assignedTo: string;
+  reportedBy: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
 const ReportIssue: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    equipmentId: '',
-    issueType: '',
-    description: '',
-    priority: 'medium',
-    location: '',
-  });
+  const [selectedEquipment, setSelectedEquipment] = useState<string>('');
+  const [issue, setIssue] = useState('');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
-        const data = await equipmentApi.getAll();
-        setEquipment(data as Equipment[]);
+        const data = await equipmentApi.getAll() as Equipment[];
+        setEquipment(data);
       } catch (error) {
+        console.error('Error fetching equipment:', error);
         toast.error('Failed to fetch equipment list');
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -42,173 +55,150 @@ const ReportIssue: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedEquipment || !issue) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
     setIsSubmitting(true);
-
     try {
-      const selectedEquipment = equipment.find(eq => eq.id === formData.equipmentId);
-      if (!selectedEquipment) {
-        throw new Error('Selected equipment not found');
-      }
-
       await workOrdersApi.create({
-        equipmentId: formData.equipmentId,
-        issue: formData.description,
-        type: formData.issueType,
+        equipmentId: selectedEquipment,
+        issue,
+        type: 'maintenance',
         assignedTo: '', // Will be assigned by admin
-        reportedBy: '', // Will be set by backend based on auth token
-        actions: `Priority: ${formData.priority}\nLocation: ${formData.location}`
+        reportedBy: user?.id || '',
+        actions: `Priority: ${priority}`
       });
-      
-      toast.success('Issue reported successfully!');
-      navigate('/dashboard');
+
+      toast.success('Issue reported successfully');
+      navigate('/lab/dashboard');
     } catch (error) {
-      toast.error('Failed to submit report. Please try again.');
+      console.error('Error reporting issue:', error);
+      toast.error('Failed to report issue');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white rounded-xl shadow-sm p-8"
-      >
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Report Equipment Issue</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Equipment Selection */}
-          <div>
-            <label htmlFor="equipmentId" className="block text-sm font-medium text-gray-700 mb-2">
-              Equipment
-            </label>
-            <select
-              id="equipmentId"
-              name="equipmentId"
-              value={formData.equipmentId}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Select Equipment</option>
-              {equipment.map(eq => (
-                <option key={eq.id} value={eq.id}>
-                  {eq.model} ({eq.serialNumber}) - {eq.location}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Issue Type */}
-          <div>
-            <label htmlFor="issueType" className="block text-sm font-medium text-gray-700 mb-2">
-              Issue Type
-            </label>
-            <select
-              id="issueType"
-              name="issueType"
-              value={formData.issueType}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Select Issue Type</option>
-              <option value="malfunction">Malfunction</option>
-              <option value="calibration">Calibration Issue</option>
-              <option value="physical_damage">Physical Damage</option>
-              <option value="safety_hazard">Safety Hazard</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          {/* Priority */}
-          <div>
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
-              Priority
-            </label>
-            <select
-              id="priority"
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Please provide detailed information about the issue..."
-            />
-          </div>
-
-          {/* Location */}
-          <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-              Location
-            </label>
-            <input
-              type="text"
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., Lab 1, Room 101"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end space-x-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-3">
             <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              onClick={() => navigate('/lab/dashboard')}
+              className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
             >
-              Cancel
+              <ArrowLeftIcon className="h-6 w-6" />
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Report'}
-            </button>
+            <h1 className="text-2xl font-bold text-blue-900">Report Equipment Issue</h1>
           </div>
-        </form>
-      </motion.div>
+        </div>
+
+        {/* Form */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Equipment Selection */}
+            <div>
+              <label htmlFor="equipment" className="block text-sm font-medium text-blue-900 mb-2">
+                Select Equipment
+              </label>
+              <select
+                id="equipment"
+                value={selectedEquipment}
+                onChange={(e) => setSelectedEquipment(e.target.value)}
+                className="w-full p-3 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="">Select equipment...</option>
+                {equipment.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.model} (S/N: {item.serialNumber}) - {item.location}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Issue Description */}
+            <div>
+              <label htmlFor="issue" className="block text-sm font-medium text-blue-900 mb-2">
+                Issue Description
+              </label>
+              <textarea
+                id="issue"
+                value={issue}
+                onChange={(e) => setIssue(e.target.value)}
+                rows={4}
+                className="w-full p-3 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Describe the issue in detail..."
+                required
+              />
+            </div>
+
+            {/* Priority Selection */}
+            <div>
+              <label className="block text-sm font-medium text-blue-900 mb-2">
+                Priority Level
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setPriority('low')}
+                  className={`p-3 rounded-lg border ${
+                    priority === 'low'
+                      ? 'bg-green-50 border-green-200 text-green-700'
+                      : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  Low
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPriority('medium')}
+                  className={`p-3 rounded-lg border ${
+                    priority === 'medium'
+                      ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                      : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  Medium
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPriority('high')}
+                  className={`p-3 rounded-lg border ${
+                    priority === 'high'
+                      ? 'bg-red-50 border-red-200 text-red-700'
+                      : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  High
+                </button>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => navigate('/lab/dashboard')}
+                className="px-6 py-3 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Report'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

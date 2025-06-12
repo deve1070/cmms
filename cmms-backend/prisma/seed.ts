@@ -22,88 +22,362 @@ async function main() {
   const labTechPassword = await bcrypt.hash('labtech123', 10);
 
   // Create sample users
-  const admin = await prisma.user.create({
-    data: {
-      username: 'admin',
-      email: 'admin@lab.com',
-      role: 'Admin',
-      password: adminPassword,
-      department: 'IT',
-      permissions: JSON.stringify(['manage_users', 'manage_equipment', 'manage_budgets']),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  });
+  const users = await Promise.all([
+    prisma.user.create({
+      data: {
+        username: 'admin',
+        password: await bcrypt.hash('admin123', 10),
+        role: 'admin',
+        email: 'admin@example.com',
+        permissions: JSON.stringify(['read', 'write']),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+    prisma.user.create({
+      data: {
+        username: 'labtech',
+        password: await bcrypt.hash('labtech123', 10),
+        role: 'laboratory technician',
+        email: 'labtech@example.com',
+        permissions: JSON.stringify(['read', 'write']),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+    prisma.user.create({
+      data: {
+        username: 'biomedical',
+        password: await bcrypt.hash('biomedical123', 10),
+        role: 'biomedical engineer',
+        email: 'biomedical@example.com',
+        permissions: JSON.stringify(['read', 'write']),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+    prisma.user.create({
+      data: {
+        username: 'maintenance',
+        password: await bcrypt.hash('maintenance123', 10),
+        role: 'engineer for maintenance',
+        email: 'maintenance@example.com',
+        permissions: JSON.stringify(['read', 'write']),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+  ]);
 
-  const engineer = await prisma.user.create({
-    data: {
-      username: 'engineer',
-      email: 'engineer@lab.com',
-      role: 'Engineer',
-      password: engineerPassword,
-      department: 'Engineering',
-      permissions: JSON.stringify(['manage_equipment', 'view_reports']),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  });
+  // Create sample equipment (5 for each type)
+  const microscopes = await Promise.all([
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'MIC-001',
+        manufacturerName: 'Olympus',
+        modelNumber: 'BX53',
+        manufacturerServiceNumber: 'OLY-12345',
+        vendorName: 'Olympus',
+        vendorCode: 'OLY',
+        locationDescription: 'Lab 101',
+        locationCode: 'L101',
+        purchasePrice: 15000.00,
+        installationDate: new Date('2023-01-15').toISOString(),
+        warrantyExpirationDate: new Date('2026-01-15').toISOString(),
+        status: 'Operational',
+        category: 'Microscope',
+        department: 'Biology',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'MIC-002',
+        manufacturerName: 'Nikon',
+        modelNumber: 'Eclipse E200',
+        manufacturerServiceNumber: 'NIK-54321',
+        vendorName: 'Nikon',
+        vendorCode: 'NIK',
+        locationDescription: 'Lab 102',
+        locationCode: 'L102',
+        purchasePrice: 12000.00,
+        installationDate: new Date('2023-02-20').toISOString(),
+        warrantyExpirationDate: new Date('2026-02-20').toISOString(),
+        status: 'Operational',
+        category: 'Microscope',
+        department: 'Biology',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'MIC-003',
+        manufacturerName: 'Leica',
+        modelNumber: 'DM750',
+        manufacturerServiceNumber: 'LEI-98765',
+        vendorName: 'Leica',
+        vendorCode: 'LEI',
+        locationDescription: 'Lab 103',
+        locationCode: 'L103',
+        purchasePrice: 18000.00,
+        installationDate: new Date('2023-03-10').toISOString(),
+        warrantyExpirationDate: new Date('2026-03-10').toISOString(),
+        status: 'Operational',
+        category: 'Microscope',
+        department: 'Biology',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'MIC-004',
+        manufacturerName: 'Zeiss',
+        modelNumber: 'Axio Observer',
+        manufacturerServiceNumber: 'ZEI-45678',
+        vendorName: 'Zeiss',
+        vendorCode: 'ZEI',
+        locationDescription: 'Lab 104',
+        locationCode: 'L104',
+        purchasePrice: 20000.00,
+        installationDate: new Date('2023-04-05').toISOString(),
+        warrantyExpirationDate: new Date('2026-04-05').toISOString(),
+        status: 'Operational',
+        category: 'Microscope',
+        department: 'Biology',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'MIC-005',
+        manufacturerName: 'Olympus',
+        modelNumber: 'CX43',
+        manufacturerServiceNumber: 'OLY-67890',
+        vendorName: 'Olympus',
+        vendorCode: 'OLY',
+        locationDescription: 'Lab 105',
+        locationCode: 'L105',
+        purchasePrice: 10000.00,
+        installationDate: new Date('2023-05-20').toISOString(),
+        warrantyExpirationDate: new Date('2026-05-20').toISOString(),
+        status: 'Operational',
+        category: 'Microscope',
+        department: 'Biology',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+  ]);
 
-  const technician = await prisma.user.create({
-    data: {
-      username: 'technician',
-      email: 'technician@lab.com',
-      role: 'Technician',
-      password: technicianPassword,
-      department: 'Maintenance',
-      permissions: JSON.stringify(['view_equipment', 'create_work_orders']),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  });
+  const centrifuges = await Promise.all([
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'CEN-001',
+        manufacturerName: 'Eppendorf',
+        modelNumber: '5810R',
+        manufacturerServiceNumber: 'EPP-12345',
+        vendorName: 'Eppendorf',
+        vendorCode: 'EPP',
+        locationDescription: 'Lab 201',
+        locationCode: 'L201',
+        purchasePrice: 8000.00,
+        installationDate: new Date('2023-01-15').toISOString(),
+        warrantyExpirationDate: new Date('2026-01-15').toISOString(),
+        status: 'Operational',
+        category: 'Centrifuge',
+        department: 'Chemistry',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'CEN-002',
+        manufacturerName: 'Thermo Fisher',
+        modelNumber: 'Sorvall ST 16R',
+        manufacturerServiceNumber: 'THF-54321',
+        vendorName: 'Thermo Fisher',
+        vendorCode: 'THF',
+        locationDescription: 'Lab 202',
+        locationCode: 'L202',
+        purchasePrice: 10000.00,
+        installationDate: new Date('2023-02-20').toISOString(),
+        warrantyExpirationDate: new Date('2026-02-20').toISOString(),
+        status: 'Operational',
+        category: 'Centrifuge',
+        department: 'Chemistry',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'CEN-003',
+        manufacturerName: 'Beckman Coulter',
+        modelNumber: 'Allegra X-15R',
+        manufacturerServiceNumber: 'BEC-98765',
+        vendorName: 'Beckman Coulter',
+        vendorCode: 'BEC',
+        locationDescription: 'Lab 203',
+        locationCode: 'L203',
+        purchasePrice: 12000.00,
+        installationDate: new Date('2023-03-10').toISOString(),
+        warrantyExpirationDate: new Date('2026-03-10').toISOString(),
+        status: 'Operational',
+        category: 'Centrifuge',
+        department: 'Chemistry',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'CEN-004',
+        manufacturerName: 'Sigma',
+        modelNumber: '3-18KS',
+        manufacturerServiceNumber: 'SIG-45678',
+        vendorName: 'Sigma',
+        vendorCode: 'SIG',
+        locationDescription: 'Lab 204',
+        locationCode: 'L204',
+        purchasePrice: 9000.00,
+        installationDate: new Date('2023-04-05').toISOString(),
+        warrantyExpirationDate: new Date('2026-04-05').toISOString(),
+        status: 'Operational',
+        category: 'Centrifuge',
+        department: 'Chemistry',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'CEN-005',
+        manufacturerName: 'Eppendorf',
+        modelNumber: '5424R',
+        manufacturerServiceNumber: 'EPP-67890',
+        vendorName: 'Eppendorf',
+        vendorCode: 'EPP',
+        locationDescription: 'Lab 205',
+        locationCode: 'L205',
+        purchasePrice: 7000.00,
+        installationDate: new Date('2023-05-20').toISOString(),
+        warrantyExpirationDate: new Date('2026-05-20').toISOString(),
+        status: 'Operational',
+        category: 'Centrifuge',
+        department: 'Chemistry',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+  ]);
 
-  const labTech = await prisma.user.create({
-    data: {
-      username: 'labtech',
-      email: 'labtech@lab.com',
-      role: 'LAB_TECH',
-      password: labTechPassword,
-      department: 'Laboratory',
-      permissions: JSON.stringify(['view_equipment', 'report_issues', 'view_maintenance']),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  });
-
-  // Create sample equipment
-  const microscope = await prisma.equipment.create({
-    data: {
-      serialNumber: 'MIC-001',
-      model: 'Olympus BX53',
-      location: 'Lab 101',
-      purchaseDate: '2023-01-15',
-      warrantyDetails: '3 years warranty',
-      category: 'Microscope',
-      manufacturer: 'Olympus',
-      department: 'Biology',
-      cost: 15000.00,
-      status: 'Operational'
-    }
-  });
-
-  const centrifuge = await prisma.equipment.create({
-    data: {
-      serialNumber: 'CEN-001',
-      model: 'Eppendorf 5810R',
-      location: 'Lab 102',
-      purchaseDate: '2023-02-20',
-      warrantyDetails: '2 years warranty',
-      category: 'Centrifuge',
-      manufacturer: 'Eppendorf',
-      department: 'Chemistry',
-      cost: 8000.00,
-      status: 'Operational'
-    }
-  });
+  const analyzers = await Promise.all([
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'ANA-001',
+        manufacturerName: 'Roche',
+        modelNumber: 'Cobas c501',
+        manufacturerServiceNumber: 'ROC-12345',
+        vendorName: 'Roche',
+        vendorCode: 'ROC',
+        locationDescription: 'Lab 301',
+        locationCode: 'L301',
+        purchasePrice: 25000.00,
+        installationDate: new Date('2023-01-15').toISOString(),
+        warrantyExpirationDate: new Date('2026-01-15').toISOString(),
+        status: 'Operational',
+        category: 'Analyzer',
+        department: 'Clinical',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'ANA-002',
+        manufacturerName: 'Siemens',
+        modelNumber: 'ADVIA 1800',
+        manufacturerServiceNumber: 'SIE-54321',
+        vendorName: 'Siemens',
+        vendorCode: 'SIE',
+        locationDescription: 'Lab 302',
+        locationCode: 'L302',
+        purchasePrice: 30000.00,
+        installationDate: new Date('2023-02-20').toISOString(),
+        warrantyExpirationDate: new Date('2026-02-20').toISOString(),
+        status: 'Operational',
+        category: 'Analyzer',
+        department: 'Clinical',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'ANA-003',
+        manufacturerName: 'Abbott',
+        modelNumber: 'Architect c8000',
+        manufacturerServiceNumber: 'ABB-98765',
+        vendorName: 'Abbott',
+        vendorCode: 'ABB',
+        locationDescription: 'Lab 303',
+        locationCode: 'L303',
+        purchasePrice: 28000.00,
+        installationDate: new Date('2023-03-10').toISOString(),
+        warrantyExpirationDate: new Date('2026-03-10').toISOString(),
+        status: 'Operational',
+        category: 'Analyzer',
+        department: 'Clinical',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'ANA-004',
+        manufacturerName: 'Beckman Coulter',
+        modelNumber: 'AU5800',
+        manufacturerServiceNumber: 'BEC-45678',
+        vendorName: 'Beckman Coulter',
+        vendorCode: 'BEC',
+        locationDescription: 'Lab 304',
+        locationCode: 'L304',
+        purchasePrice: 27000.00,
+        installationDate: new Date('2023-04-05').toISOString(),
+        warrantyExpirationDate: new Date('2026-04-05').toISOString(),
+        status: 'Operational',
+        category: 'Analyzer',
+        department: 'Clinical',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+    prisma.equipment.create({
+      data: {
+        serialNumber: 'ANA-005',
+        manufacturerName: 'Roche',
+        modelNumber: 'Cobas e601',
+        manufacturerServiceNumber: 'ROC-67890',
+        vendorName: 'Roche',
+        vendorCode: 'ROC',
+        locationDescription: 'Lab 305',
+        locationCode: 'L305',
+        purchasePrice: 22000.00,
+        installationDate: new Date('2023-05-20').toISOString(),
+        warrantyExpirationDate: new Date('2026-05-20').toISOString(),
+        status: 'Operational',
+        category: 'Analyzer',
+        department: 'Clinical',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }),
+  ]);
 
   // Create sample spare parts
   const microscopeLens = await prisma.sparePart.create({
@@ -117,7 +391,8 @@ async function main() {
       supplier: 'Olympus',
       location: 'Storage Room A',
       minOrderQty: 1,
-      leadTime: 14
+      leadTime: 14,
+      equipmentId: microscopes[0].id
     }
   });
 
@@ -132,33 +407,63 @@ async function main() {
       supplier: 'Eppendorf',
       location: 'Storage Room B',
       minOrderQty: 1,
-      leadTime: 21
+      leadTime: 21,
+      equipmentId: centrifuges[0].id
     }
   });
 
   // Create sample work orders
   const workOrder1 = await prisma.workOrder.create({
     data: {
-      equipmentId: microscope.id,
+      equipmentId: microscopes[0].id,
       issue: 'Lens calibration needed',
       type: 'Preventive',
-      assignedTo: technician.id,
-      status: 'Pending',
-      createdAt: new Date().toISOString(),
-      reportedBy: labTech.id
+      priority: 'Medium',
+      status: 'Reported',
+      reportedBy: users[1].id,
+      reportedAt: new Date('2023-06-01').toISOString(),
+      assignedTo: users[2].id,
+      assignedAt: new Date('2023-06-02').toISOString(),
+      estimatedCompletion: new Date('2023-06-10').toISOString(),
+      description: 'Microscope lens requires calibration for accurate results.',
+      symptoms: 'Blurry images',
+      impact: 'Reduced accuracy in experiments',
+      actions: null,
+      notes: null,
+      sparePartsNeeded: null,
+      partsUsed: null,
+      completionNotes: null,
+      completedAt: null,
+      cost: null,
+      createdAt: new Date('2023-06-01').toISOString(),
+      updatedAt: new Date('2023-06-01').toISOString()
     }
   });
 
   const workOrder2 = await prisma.workOrder.create({
     data: {
-      equipmentId: centrifuge.id,
+      equipmentId: centrifuges[0].id,
       issue: 'Rotor replacement required',
       type: 'Corrective',
-      assignedTo: technician.id,
+      priority: 'High',
       status: 'In Progress',
-      createdAt: new Date().toISOString(),
-      reportedBy: labTech.id,
-      actions: 'Ordered new rotor'
+      reportedBy: users[1].id,
+      reportedAt: new Date('2023-07-01').toISOString(),
+      assignedTo: users[2].id,
+      assignedAt: new Date('2023-07-02').toISOString(),
+      estimatedCompletion: new Date('2023-07-10').toISOString(),
+      description: 'Centrifuge rotor is damaged and needs replacement.',
+      symptoms: 'Unusual noise, vibration',
+      impact: 'Cannot run samples',
+      actions: 'Ordered new rotor',
+      notes: null,
+      sparePartsNeeded: 'Centrifuge Rotor',
+      partsUsed: null,
+      completionNotes: null,
+      completedAt: null,
+      cost: null,
+      createdAt: new Date('2023-07-01').toISOString(),
+      updatedAt: new Date('2023-07-01').toISOString()
     }
   });
 
@@ -166,7 +471,7 @@ async function main() {
   const microscopeContract = await prisma.contract.create({
     data: {
       vendor: 'Olympus Service',
-      equipmentId: microscope.id,
+      equipmentId: microscopes[0].id,
       startDate: '2023-01-15',
       endDate: '2026-01-15',
       details: 'Annual maintenance and calibration service',
@@ -177,7 +482,7 @@ async function main() {
   const centrifugeContract = await prisma.contract.create({
     data: {
       vendor: 'Eppendorf Service',
-      equipmentId: centrifuge.id,
+      equipmentId: centrifuges[0].id,
       startDate: '2023-02-20',
       endDate: '2025-02-20',
       details: 'Quarterly maintenance service',
@@ -188,10 +493,10 @@ async function main() {
   // Create sample maintenance history
   const maintenance1 = await prisma.maintenanceHistory.create({
     data: {
-      equipmentId: microscope.id,
+      equipmentId: microscopes[0].id,
       type: 'Preventive',
       description: 'Regular calibration and cleaning',
-      performedBy: technician.id,
+      performedBy: users[2].id,
       date: '2023-06-15',
       cost: 500.00,
       partsUsed: 'Cleaning solution, calibration tools'
@@ -200,94 +505,84 @@ async function main() {
 
   const maintenance2 = await prisma.maintenanceHistory.create({
     data: {
-      equipmentId: centrifuge.id,
+      equipmentId: centrifuges[0].id,
       type: 'Corrective',
-      description: 'Rotor bearing replacement',
-      performedBy: technician.id,
-      date: '2023-07-01',
-      cost: 800.00,
-      partsUsed: 'New bearing set'
+      description: 'Rotor replacement',
+      performedBy: users[2].id,
+      date: '2023-07-15',
+      cost: 1200.00,
+      partsUsed: 'New rotor'
     }
   });
 
   // Create sample reports
-  const performanceReport = await prisma.report.create({
+  const report1 = await prisma.report.create({
     data: {
       type: 'Performance',
-      title: 'Q2 2023 Equipment Performance',
-      content: 'Equipment uptime and maintenance analysis',
-      generatedAt: new Date().toISOString(),
-      generatedBy: admin.id,
-      period: '2023-Q2',
-      metrics: JSON.stringify({
-        uptime: '98%',
-        maintenanceCost: 5000,
-        preventiveMaintenance: 8,
-        correctiveMaintenance: 2
-      })
+      title: 'Monthly Equipment Performance Report',
+      content: 'Detailed analysis of equipment performance and maintenance activities.',
+      generatedAt: '2023-06-30',
+      generatedBy: users[0].id,
+      period: '2023-06',
+      metrics: JSON.stringify({ uptime: '95%', maintenanceCost: 5000, issues: 3 })
     }
   });
 
-  const financialReport = await prisma.report.create({
+  const report2 = await prisma.report.create({
     data: {
       type: 'Financial',
-      title: 'Q2 2023 Budget Report',
-      content: 'Maintenance and parts spending analysis',
-      generatedAt: new Date().toISOString(),
-      generatedBy: admin.id,
+      title: 'Q2 Maintenance Budget Report',
+      content: 'Overview of maintenance costs and budget allocation.',
+      generatedAt: '2023-06-30',
+      generatedBy: users[0].id,
       period: '2023-Q2',
-      metrics: JSON.stringify({
-        totalSpent: 15000,
-        budgetUtilization: '75%',
-        partsCost: 8000,
-        serviceCost: 7000
-      })
+      metrics: JSON.stringify({ totalCost: 15000, budget: 20000, variance: 5000 })
     }
   });
 
   // Create sample budgets
-  const maintenanceBudget = await prisma.budget.create({
+  const budget1 = await prisma.budget.create({
     data: {
       year: '2023',
-      month: 'Q2',
+      month: '06',
       category: 'Maintenance',
       allocated: 20000.00,
       spent: 15000.00,
-      department: 'All'
+      department: 'Laboratory'
     }
   });
 
-  const partsBudget = await prisma.budget.create({
+  const budget2 = await prisma.budget.create({
     data: {
       year: '2023',
-      month: 'Q2',
+      month: '07',
       category: 'Parts',
       allocated: 10000.00,
-      spent: 8000.00,
-      department: 'All'
+      spent: 5000.00,
+      department: 'Laboratory'
     }
   });
 
   // Create sample compliance records
-  const microscopeCompliance = await prisma.compliance.create({
+  const compliance1 = await prisma.compliance.create({
     data: {
-      equipmentId: microscope.id,
+      equipmentId: microscopes[0].id,
       standard: 'ISO 15189',
       status: 'Compliant',
       lastCheck: '2023-06-01',
       nextDue: '2023-12-01',
-      notes: 'All requirements met'
+      notes: 'All requirements met.'
     }
   });
 
-  const centrifugeCompliance = await prisma.compliance.create({
+  const compliance2 = await prisma.compliance.create({
     data: {
-      equipmentId: centrifuge.id,
+      equipmentId: centrifuges[0].id,
       standard: 'ISO 15189',
       status: 'Compliant',
-      lastCheck: '2023-06-15',
-      nextDue: '2023-12-15',
-      notes: 'Regular calibration performed'
+      lastCheck: '2023-06-01',
+      nextDue: '2023-12-01',
+      notes: 'All requirements met.'
     }
   });
 

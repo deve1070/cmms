@@ -22,23 +22,28 @@ router.get('/', authenticateToken, async (req, res) => {
 // Create new work order
 router.post('/', authenticateToken, checkRole(['Admin', 'Technician', 'Engineer']), async (req, res) => {
   try {
-    const { equipmentId, issue, type, assignedTo, reportedBy, actions } = req.body;
-    const newWorkOrder = await prisma.workOrder.create({
+    const { equipmentId, issue, type, assignedTo, reportedBy, actions, description } = req.body;
+
+    const workOrder = await prisma.workOrder.create({
       data: {
         equipmentId,
         issue,
         type,
-        assignedTo,
+        assignedTo: assignedTo || 'Unassigned',
         reportedBy,
+        reportedAt: new Date().toISOString(),
+        description,
         actions,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        equipment: {
+          connect: { id: equipmentId }
+        }
       },
-      include: {
-        equipment: true
-      }
     });
-    res.status(201).json(newWorkOrder);
+
+    res.status(201).json(workOrder);
   } catch (error) {
+    console.error('Error creating work order:', error);
     res.status(500).json({ error: 'Failed to create work order' });
   }
 });
@@ -47,35 +52,19 @@ router.post('/', authenticateToken, checkRole(['Admin', 'Technician', 'Engineer'
 router.put('/:id', authenticateToken, checkRole(['Admin', 'Technician', 'Engineer']), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, actions, completedAt } = req.body;
-    const updatedWorkOrder = await prisma.workOrder.update({
+    const { assignedTo, actions } = req.body;
+
+    const workOrder = await prisma.workOrder.update({
       where: { id },
       data: {
-        status,
+        assignedTo: assignedTo || 'Unassigned',
         actions,
-        completedAt: completedAt || null
       },
-      include: {
-        equipment: true
-      }
     });
 
-    // If work order is completed, create maintenance history entry
-    if (status === 'Completed' && !completedAt) {
-      await prisma.maintenanceHistory.create({
-        data: {
-          equipmentId: updatedWorkOrder.equipmentId,
-          type: updatedWorkOrder.type,
-          description: updatedWorkOrder.issue,
-          performedBy: updatedWorkOrder.assignedTo,
-          date: new Date().toISOString(),
-          partsUsed: updatedWorkOrder.actions
-        }
-      });
-    }
-
-    res.json(updatedWorkOrder);
+    res.json(workOrder);
   } catch (error) {
+    console.error('Error updating work order:', error);
     res.status(500).json({ error: 'Failed to update work order' });
   }
 });

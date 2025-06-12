@@ -1,185 +1,215 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { equipmentApi } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { equipmentApi, maintenanceApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
   BeakerIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  ArrowPathIcon,
+  ArrowLeftIcon,
   MagnifyingGlassIcon,
+  FunnelIcon,
+  CalendarIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 
 interface Equipment {
   id: string;
-  name: string;
-  model: string;
   serialNumber: string;
-  status: 'active' | 'maintenance' | 'inactive';
+  model: string;
   location: string;
+  status: string;
   lastMaintenance: string;
   nextMaintenance: string;
-  category: string;
+}
+
+interface MaintenanceRecord {
+  id: string;
+  equipmentId: string;
+  type: 'preventive' | 'corrective';
+  status: 'pending' | 'in_progress' | 'completed';
+  description: string;
+  date: string;
 }
 
 const LabEquipmentList: React.FC = () => {
+  const navigate = useNavigate();
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const { user } = useAuth();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchEquipment();
-  }, [selectedCategory]);
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [equipmentData, maintenanceData] = await Promise.all([
+          equipmentApi.getAll() as Promise<Equipment[]>,
+          maintenanceApi.getAll({}) as Promise<MaintenanceRecord[]>,
+        ]);
 
-  const fetchEquipment = async () => {
-    try {
-      const data = await equipmentApi.getAll() as Equipment[];
-      const filteredData = selectedCategory === 'all'
-        ? data
-        : data.filter(eq => eq.category === selectedCategory);
-      setEquipment(filteredData);
-    } catch (error) {
-      toast.error('Failed to fetch equipment');
-    } finally {
-      setLoading(false);
-    }
-  };
+        setEquipment(equipmentData);
+        setMaintenanceRecords(maintenanceData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast.error('Failed to fetch equipment data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const getStatusColor = (status: Equipment['status']) => {
+    fetchData();
+  }, []);
+
+  const filteredEquipment = equipment.filter((item) => {
+    const matchesSearch = 
+      (item.model?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (item.serialNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (item.location?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'text-green-600 bg-green-100';
-      case 'maintenance':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'inactive':
-        return 'text-red-600 bg-red-100';
+      case 'operational':
+        return 'bg-green-100 text-green-800';
+      case 'needs calibration':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'maintenance required':
+        return 'bg-red-100 text-red-800';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusIcon = (status: Equipment['status']) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircleIcon className="h-5 w-5 text-green-600" />;
-      case 'maintenance':
-        return <ClockIcon className="h-5 w-5 text-yellow-600" />;
-      case 'inactive':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />;
-      default:
-        return null;
-    }
+  const getMaintenanceStatus = (equipmentId: string) => {
+    const record = maintenanceRecords.find(r => r.equipmentId === equipmentId);
+    if (!record) return null;
+
+    return {
+      status: record.status,
+      date: record.date,
+      description: record.description,
+    };
   };
 
-  const filteredEquipment = equipment.filter(eq =>
-    eq.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eq.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eq.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eq.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Lab Equipment</h1>
-        <button
-          onClick={() => fetchEquipment()}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <ArrowPathIcon className="h-5 w-5 mr-2" />
-          Refresh
-        </button>
-      </div>
-
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div className="relative flex-1 max-w-sm">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => navigate('/lab/dashboard')}
+              className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
+            >
+              <ArrowLeftIcon className="h-6 w-6" />
+            </button>
+            <h1 className="text-2xl font-bold text-blue-900">Equipment Status</h1>
           </div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search equipment..."
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
         </div>
-        <div className="flex items-center space-x-4">
-          <label htmlFor="category" className="text-sm font-medium text-gray-700">
-            Category:
-          </label>
-          <select
-            id="category"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="mt-1 block w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="all">All Categories</option>
-            <option value="analytical">Analytical</option>
-            <option value="testing">Testing</option>
-            <option value="measurement">Measurement</option>
-            <option value="safety">Safety</option>
-          </select>
-        </div>
-      </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {filteredEquipment.map((eq) => (
-            <li key={eq.id}>
-              <div className="px-4 py-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <BeakerIcon className="h-6 w-6 text-gray-400 mr-3" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-600 truncate">
-                        {eq.name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Model: {eq.model} | S/N: {eq.serialNumber}
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search equipment..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <MagnifyingGlassIcon className="h-5 w-5 text-blue-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <FunnelIcon className="h-5 w-5 text-blue-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Status</option>
+                <option value="operational">Operational</option>
+                <option value="needs calibration">Needs Calibration</option>
+                <option value="maintenance required">Maintenance Required</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Equipment List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredEquipment.map((item) => {
+            const maintenance = getMaintenanceStatus(item.id);
+            return (
+              <div
+                key={item.id}
+                className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-semibold text-blue-900">{item.model}</h3>
+                    <p className="text-sm text-blue-600">S/N: {item.serialNumber}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(item.status)}`}>
+                    {item.status}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center text-sm text-blue-600">
+                    <BeakerIcon className="h-4 w-4 mr-2" />
+                    <span>{item.location}</span>
+                  </div>
+
+                  <div className="flex items-center text-sm text-blue-600">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    <span>Last Maintenance: {new Date(item.lastMaintenance).toLocaleDateString()}</span>
+                  </div>
+
+                  <div className="flex items-center text-sm text-blue-600">
+                    <ClockIcon className="h-4 w-4 mr-2" />
+                    <span>Next Maintenance: {new Date(item.nextMaintenance).toLocaleDateString()}</span>
+                  </div>
+
+                  {maintenance && (
+                    <div className="mt-4 pt-4 border-t border-blue-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-blue-900">Maintenance Status</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          maintenance.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          maintenance.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {maintenance.status ? maintenance.status.replace('_', ' ') : 'Unknown'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-blue-600">{maintenance.description}</p>
+                      <p className="text-xs text-blue-500 mt-1">
+                        Date: {new Date(maintenance.date).toLocaleDateString()}
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(eq.status)}`}>
-                      {getStatusIcon(eq.status)}
-                      <span className="ml-1">{eq.status}</span>
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-2 sm:flex sm:justify-between">
-                  <div className="sm:flex">
-                    <p className="flex items-center text-sm text-gray-500">
-                      Location: {eq.location}
-                    </p>
-                    <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                      Category: {eq.category}
-                    </p>
-                  </div>
-                  <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                    <p>
-                      Last Maintenance: {new Date(eq.lastMaintenance).toLocaleDateString()}
-                    </p>
-                    <p className="ml-6">
-                      Next Maintenance: {new Date(eq.nextMaintenance).toLocaleDateString()}
-                    </p>
-                  </div>
+                  )}
                 </div>
               </div>
-            </li>
-          ))}
-        </ul>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -8,7 +8,12 @@ const prisma = new PrismaClient();
 // Get all equipment
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const equipment = await prisma.equipment.findMany();
+    const equipment = await prisma.equipment.findMany({
+      include: {
+        maintenanceHistory: true,
+        workOrders: true
+      }
+    });
     res.json(equipment);
   } catch (error) {
     console.error('Error fetching equipment:', error);
@@ -21,7 +26,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const equipment = await prisma.equipment.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        maintenanceHistory: true,
+        workOrders: true
+      }
     });
 
     if (!equipment) {
@@ -38,34 +47,25 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new equipment
 router.post('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
   try {
-    const {
-      serialNumber,
-      model,
-      location,
-      purchaseDate,
-      warrantyDetails,
-      category,
-      manufacturer,
-      department,
-      cost
-    } = req.body;
-
     const equipment = await prisma.equipment.create({
       data: {
-        serialNumber,
-        model,
-        location,
-        purchaseDate,
-        warrantyDetails,
-        category,
-        manufacturer,
-        department,
-        cost,
-        status: 'Operational'
-      }
+        serialNumber: req.body.serialNumber,
+        manufacturerName: req.body.manufacturerName,
+        modelNumber: req.body.modelNumber,
+        manufacturerServiceNumber: req.body.manufacturerServiceNumber,
+        vendorName: req.body.vendorName,
+        vendorCode: req.body.vendorCode,
+        locationDescription: req.body.locationDescription,
+        locationCode: req.body.locationCode,
+        purchasePrice: req.body.purchasePrice,
+        installationDate: new Date(req.body.installationDate),
+        warrantyExpirationDate: new Date(req.body.warrantyExpirationDate),
+        status: req.body.status,
+        category: req.body.category,
+        department: req.body.department,
+      },
     });
-
-    res.status(201).json(equipment);
+    res.json(equipment);
   } catch (error) {
     console.error('Error creating equipment:', error);
     res.status(500).json({ error: 'Failed to create equipment' });
@@ -75,36 +75,25 @@ router.post('/', authenticateToken, checkRole(['Admin', 'Engineer']), async (req
 // Update equipment
 router.put('/:id', authenticateToken, checkRole(['Admin', 'Engineer']), async (req, res) => {
   try {
-    const { id } = req.params;
-    const {
-      serialNumber,
-      model,
-      location,
-      purchaseDate,
-      warrantyDetails,
-      category,
-      manufacturer,
-      department,
-      cost,
-      status
-    } = req.body;
-
     const equipment = await prisma.equipment.update({
-      where: { id },
+      where: { id: req.params.id },
       data: {
-        serialNumber,
-        model,
-        location,
-        purchaseDate,
-        warrantyDetails,
-        category,
-        manufacturer,
-        department,
-        cost,
-        status
-      }
+        serialNumber: req.body.serialNumber,
+        manufacturerName: req.body.manufacturerName,
+        modelNumber: req.body.modelNumber,
+        manufacturerServiceNumber: req.body.manufacturerServiceNumber,
+        vendorName: req.body.vendorName,
+        vendorCode: req.body.vendorCode,
+        locationDescription: req.body.locationDescription,
+        locationCode: req.body.locationCode,
+        purchasePrice: req.body.purchasePrice,
+        installationDate: new Date(req.body.installationDate),
+        warrantyExpirationDate: new Date(req.body.warrantyExpirationDate),
+        status: req.body.status,
+        category: req.body.category,
+        department: req.body.department,
+      },
     });
-
     res.json(equipment);
   } catch (error) {
     console.error('Error updating equipment:', error);
@@ -198,7 +187,7 @@ router.post('/:id/maintenance', authenticateToken, async (req, res) => {
     // Update equipment's last maintenance date
     await prisma.equipment.update({
       where: { id },
-      data: { lastMaintenance: date }
+      data: { }
     });
 
     res.json(maintenance);

@@ -18,7 +18,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // Create new spare part
 router.post('/', authenticateToken, checkRole(['Admin']), async (req, res) => {
   try {
-    const { name, quantity, threshold, category, unitCost, supplier, location, minOrderQty, leadTime } = req.body;
+    const { name, quantity, threshold, category, unitCost, supplier, location, minOrderQty, leadTime, equipmentId } = req.body;
     const newPart = await prisma.sparePart.create({
       data: {
         name,
@@ -30,11 +30,15 @@ router.post('/', authenticateToken, checkRole(['Admin']), async (req, res) => {
         location,
         minOrderQty,
         leadTime,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        equipment: {
+          connect: { id: equipmentId }
+        }
       }
     });
     res.status(201).json(newPart);
   } catch (error) {
+    console.error('Error creating spare part:', error);
     res.status(500).json({ error: 'Failed to create spare part' });
   }
 });

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -18,14 +18,18 @@ import Compliance from './pages/Compliance';
 import UserManagement from './pages/UserManagement';
 
 // Maintenance pages
-import MainTechDashboard from './pages/MainTechDashboard';
 import WorkOrders from './pages/WorkOrders';
 import ReportMaintenance from './pages/ReportMaintenance';
+import MaintenanceTechDashboard from './pages/MaintenanceTechDashboard';
+import NewWorkOrder from './pages/NewWorkOrder';
+import MaintenanceSchedule from './pages/MaintenanceSchedule';
+import MaintenanceReports from './pages/MaintenanceReports';
 
 // Lab Tech pages
 import LabTechDashboard from './pages/LabTechDashboard';
 import LabEquipmentList from './pages/LabEquipmentList';
 import ReportIssue from './pages/ReportIssue';
+import LabReports from './pages/LabReports';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({
   children,
@@ -41,16 +45,23 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string
     return <Navigate to="/login" />;
   }
 
-  if (!allowedRoles.includes(user.role.toLowerCase())) {
+  // Normalize roles for comparison
+  const userRole = user.role.toLowerCase();
+  const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
+
+  if (!normalizedAllowedRoles.includes(userRole)) {
     // Redirect to appropriate dashboard based on role
-    switch (user.role.toLowerCase()) {
+    switch (userRole) {
       case 'admin':
         return <Navigate to="/admin/dashboard" />;
-      case 'maintenance':
+      case 'engineer for maintenance':
         return <Navigate to="/maintenance/dashboard" />;
-      case 'labtech':
+      case 'laboratory technician':
         return <Navigate to="/lab/dashboard" />;
+      case 'biomedical engineer':
+        return <Navigate to="/biomedical/dashboard" />;
       default:
+        console.warn('Unknown role:', userRole);
         return <Navigate to="/welcome" />;
     }
   }
@@ -60,20 +71,23 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string
 
 const RootRedirect: React.FC = () => {
   const { user } = useAuth();
-  
+
   if (!user) {
-    return <Navigate to="/welcome" />;
+    return <Navigate to="/login" replace />;
   }
 
-  switch (user.role.toLowerCase()) {
+  const role = user.role.toLowerCase();
+  switch (role) {
     case 'admin':
-      return <Navigate to="/admin/dashboard" />;
-    case 'maintenance':
-      return <Navigate to="/maintenance/dashboard" />;
-    case 'labtech':
-      return <Navigate to="/lab/dashboard" />;
+      return <Navigate to="/admin/dashboard" replace />;
+    case 'engineer for maintenance':
+      return <Navigate to="/maintenance/dashboard" replace />;
+    case 'laboratory technician':
+      return <Navigate to="/lab/dashboard" replace />;
+    case 'biomedical engineer':
+      return <Navigate to="/biomedical/dashboard" replace />;
     default:
-      return <Navigate to="/welcome" />;
+      return <Navigate to="/welcome" replace />;
   }
 };
 
@@ -85,6 +99,7 @@ const App: React.FC = () => {
         {/* Public routes */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/" element={<RootRedirect />} />
 
         {/* Admin routes */}
         <Route
@@ -152,44 +167,52 @@ const App: React.FC = () => {
           }
         />
 
-        {/* Maintenance routes */}
+        {/* Maintenance and Engineer routes */}
         <Route
           path="/maintenance/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['maintenance']}>
-              <MainTechDashboard />
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
+              <MaintenanceTechDashboard />
             </ProtectedRoute>
           }
         />
         <Route
           path="/maintenance/work-orders"
           element={
-            <ProtectedRoute allowedRoles={['maintenance']}>
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
               <WorkOrders />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/maintenance/report"
+          path="/maintenance/work-orders/new"
           element={
-            <ProtectedRoute allowedRoles={['maintenance']}>
-              <ReportMaintenance />
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
+              <NewWorkOrder />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/maintenance/equipment"
+          path="/maintenance/schedule"
           element={
-            <ProtectedRoute allowedRoles={['maintenance']}>
-              <EquipmentList />
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
+              <MaintenanceSchedule />
             </ProtectedRoute>
           }
         />
         <Route
           path="/maintenance/spare-parts"
           element={
-            <ProtectedRoute allowedRoles={['maintenance']}>
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
               <SpareParts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/maintenance/reports"
+          element={
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
+              <MaintenanceReports />
             </ProtectedRoute>
           }
         />
@@ -198,7 +221,7 @@ const App: React.FC = () => {
         <Route
           path="/lab/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['labtech']}>
+            <ProtectedRoute allowedRoles={['laboratory technician']}>
               <LabTechDashboard />
             </ProtectedRoute>
           }
@@ -206,7 +229,7 @@ const App: React.FC = () => {
         <Route
           path="/lab/equipment"
           element={
-            <ProtectedRoute allowedRoles={['labtech']}>
+            <ProtectedRoute allowedRoles={['laboratory technician']}>
               <LabEquipmentList />
             </ProtectedRoute>
           }
@@ -214,17 +237,22 @@ const App: React.FC = () => {
         <Route
           path="/lab/report-issue"
           element={
-            <ProtectedRoute allowedRoles={['labtech']}>
+            <ProtectedRoute allowedRoles={['laboratory technician']}>
               <ReportIssue />
             </ProtectedRoute>
           }
         />
-
-        {/* Redirect root to appropriate dashboard or welcome page */}
-        <Route path="/" element={<RootRedirect />} />
+        <Route
+          path="/lab/reports"
+          element={
+            <ProtectedRoute allowedRoles={['laboratory technician']}>
+              <LabReports />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Catch all route */}
-        <Route path="*" element={<Navigate to="/welcome" />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>
   );

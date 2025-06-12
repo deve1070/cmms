@@ -10,6 +10,8 @@ import contractsRoutes from './routes/contracts';
 import reportsRoutes from './routes/reports';
 import budgetsRoutes from './routes/budgets';
 import complianceRoutes from './routes/compliance';
+import maintenanceRoutes from './routes/maintenance';
+import usersRouter from './routes/users';
 import { authenticateToken } from './middleware/auth';
 
 const app = express();
@@ -21,7 +23,7 @@ app.use(cors());
 app.use(express.json());
 
 // Public routes
-app.post('/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     console.log('Login attempt for username:', username);
@@ -79,6 +81,8 @@ app.use('/api/contracts', contractsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/budgets', budgetsRoutes);
 app.use('/api/compliance', complianceRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/users', usersRouter);
 
 // Start server
 app.listen(port, () => {

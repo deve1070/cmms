@@ -55,7 +55,8 @@ const ReportMaintenance: React.FC = () => {
       }
 
       // Create maintenance history record
-      await maintenanceApi.create(formData.equipmentId, {
+      await maintenanceApi.create({
+        equipmentId: formData.equipmentId,
         type: formData.maintenanceType,
         description: formData.description,
         performedBy: user?.username || 'Unknown',

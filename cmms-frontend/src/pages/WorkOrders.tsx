@@ -1,249 +1,158 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { workOrdersApi } from '../services/api';
-import { toast } from 'react-hot-toast';
 import {
-  ClipboardDocumentListIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  ArrowPathIcon,
+  PlusIcon,
   MagnifyingGlassIcon,
+  FunnelIcon,
 } from '@heroicons/react/24/outline';
 
 interface WorkOrder {
   id: string;
   equipmentId: string;
-  equipmentName: string;
   issue: string;
-  type: 'preventive' | 'corrective' | 'emergency';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'high' | 'medium' | 'low';
   assignedTo: string;
+  reportedBy: string;
   createdAt: string;
-  completedAt?: string;
-  notes?: string;
+  updatedAt: string;
 }
 
 const WorkOrders: React.FC = () => {
+  const navigate = useNavigate();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const { user } = useAuth();
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
+    const fetchWorkOrders = async () => {
+      try {
+        setIsLoading(true);
+        const data = await workOrdersApi.getAll() as WorkOrder[];
+        setWorkOrders(data);
+      } catch (error) {
+        console.error('Error fetching work orders:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchWorkOrders();
-  }, [selectedStatus]);
+  }, []);
 
-  const fetchWorkOrders = async () => {
-    try {
-      const data = await workOrdersApi.getAll() as WorkOrder[];
-      const filteredData = selectedStatus === 'all'
-        ? data
-        : data.filter(wo => wo.status === selectedStatus);
-      setWorkOrders(filteredData);
-    } catch (error) {
-      toast.error('Failed to fetch work orders');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const filteredWorkOrders = workOrders.filter(item => {
+    const matchesSearch = item.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.assignedTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.reportedBy.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
-  const handleStatusUpdate = async (id: string, newStatus: WorkOrder['status']) => {
-    try {
-      await workOrdersApi.update(id, { status: newStatus });
-      toast.success('Work order status updated successfully');
-      fetchWorkOrders();
-    } catch (error) {
-      toast.error('Failed to update work order status');
-    }
-  };
-
-  const getStatusColor = (status: WorkOrder['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'in_progress':
-        return 'text-blue-600 bg-blue-100';
       case 'completed':
-        return 'text-green-600 bg-green-100';
-      case 'cancelled':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getPriorityColor = (priority: WorkOrder['priority']) => {
-    switch (priority) {
-      case 'high':
-        return 'text-red-600';
-      case 'medium':
-        return 'text-yellow-600';
-      case 'low':
-        return 'text-green-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  const getStatusIcon = (status: WorkOrder['status']) => {
-    switch (status) {
-      case 'pending':
-        return <ClockIcon className="h-5 w-5 text-yellow-600" />;
+        return 'bg-green-100 text-green-800';
       case 'in_progress':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-blue-600" />;
-      case 'completed':
-        return <CheckCircleIcon className="h-5 w-5 text-green-600" />;
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
       case 'cancelled':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />;
+        return 'bg-red-100 text-red-800';
       default:
-        return null;
+        return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const filteredWorkOrders = workOrders.filter(wo =>
-    wo.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wo.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
         <button
-          onClick={() => fetchWorkOrders()}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          onClick={() => navigate('/maintenance/work-orders/new')}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <ArrowPathIcon className="h-5 w-5 mr-2" />
-          Refresh
+          <PlusIcon className="h-5 w-5 mr-2 stroke-1" />
+          New Work Order
         </button>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div className="relative flex-1 max-w-sm">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <div className="relative">
+              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 stroke-1" />
+              <input
+                type="text"
+                placeholder="Search work orders..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
           </div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search work orders..."
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
+          <div className="flex items-center space-x-2">
+            <FunnelIcon className="h-5 w-5 text-gray-400 stroke-1" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <label htmlFor="status" className="text-sm font-medium text-gray-700">
-            Status:
-          </label>
-          <select
-            id="status"
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="mt-1 block w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-      </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {filteredWorkOrders.map((wo) => (
-            <li key={wo.id}>
-              <div className="px-4 py-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <ClipboardDocumentListIcon className="h-6 w-6 text-gray-400 mr-3" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-600 truncate">
-                        {wo.equipmentName}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {wo.issue}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(wo.status)}`}>
-                      {getStatusIcon(wo.status)}
-                      <span className="ml-1">{wo.status}</span>
-                    </span>
-                    <span className={`text-sm font-medium ${getPriorityColor(wo.priority)}`}>
-                      {wo.priority} priority
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-2 sm:flex sm:justify-between">
-                  <div className="sm:flex">
-                    <p className="flex items-center text-sm text-gray-500">
-                      Type: {wo.type}
-                    </p>
-                    <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                      Assigned to: {wo.assignedTo}
-                    </p>
-                  </div>
-                  <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                    <p>
-                      Created: {new Date(wo.createdAt).toLocaleDateString()}
-                    </p>
-                    {wo.completedAt && (
-                      <p className="ml-6">
-                        Completed: {new Date(wo.completedAt).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {wo.notes && (
-                  <div className="mt-2 text-sm text-gray-500">
-                    <p>Notes: {wo.notes}</p>
-                  </div>
-                )}
-                <div className="mt-4 flex justify-end space-x-2">
-                  {wo.status === 'pending' && (
-                    <button
-                      onClick={() => handleStatusUpdate(wo.id, 'in_progress')}
-                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      Start Work
-                    </button>
-                  )}
-                  {wo.status === 'in_progress' && (
-                    <button
-                      onClick={() => handleStatusUpdate(wo.id, 'completed')}
-                      className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                      Mark Complete
-                    </button>
-                  )}
-                  {(wo.status === 'pending' || wo.status === 'in_progress') && (
-                    <button
-                      onClick={() => handleStatusUpdate(wo.id, 'cancelled')}
-                      className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reported By</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredWorkOrders.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => navigate(`/maintenance/work-orders/${item.id}`)}
+                    className="hover:bg-gray-50 cursor-pointer"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-medium text-gray-900">{item.issue}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}`}>
+                        {item.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.assignedTo}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.reportedBy}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(item.updatedAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

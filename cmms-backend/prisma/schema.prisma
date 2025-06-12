@@ -8,23 +8,29 @@ datasource db {
 }
 
 model Equipment {
-  id              String   @id @default(uuid())
-  serialNumber    String
-  model           String
-  location        String
-  purchaseDate    String
-  warrantyDetails String?
-  status          String   @default("Operational")
-  category        String   // e.g., "Microscope", "Analyzer", "Centrifuge"
-  manufacturer    String
-  lastMaintenance String?
-  nextMaintenance String?
-  maintenanceHistory MaintenanceHistory[]
-  workOrders      WorkOrder[]
-  contracts       Contract[]
-  compliance      Compliance[]
-  department      String
-  cost            Float?
+  id                      String              @id @default(uuid())
+  serialNumber            String              @unique
+  manufacturerName        String
+  modelNumber             String
+  manufacturerServiceNumber String
+  vendorName              String
+  vendorCode              String
+  locationDescription     String
+  locationCode            String
+  purchasePrice           Float
+  installationDate        DateTime
+  warrantyExpirationDate  DateTime
+  status                  String              @default("Operational")
+  category                String              // e.g., "Microscope", "Centrifuge", "Analyzer"
+  department              String
+  lastMaintenance         DateTime?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  maintenanceHistory      MaintenanceHistory[]
+  workOrders              WorkOrder[]
+  contracts               Contract[]
+  compliance              Compliance[]
+  spareParts              SparePart[]
 }
 
 model SparePart {
@@ -40,20 +46,35 @@ model SparePart {
   location    String
   minOrderQty Int
   leadTime    Int    // in days
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  equipmentId String
 }
 
 model WorkOrder {
-  id          String   @id @default(uuid())
-  equipmentId String
-  equipment   Equipment @relation(fields: [equipmentId], references: [id])
-  issue       String
-  type        String
-  assignedTo  String
-  status      String   @default("Pending")
-  createdAt   String
-  reportedBy  String
-  actions     String?
-  completedAt String?
+  id                  String   @id @default(uuid())
+  equipmentId         String
+  equipment           Equipment @relation(fields: [equipmentId], references: [id])
+  issue               String
+  type                String   // "Preventive", "Corrective", "Calibration", "Inspection"
+  priority            String   @default("Medium") // "Low", "Medium", "High", "Critical"
+  status              String   @default("Reported") // "Reported", "Assigned", "In Progress", "On Hold", "Completed", "Cancelled"
+  reportedBy          String
+  reportedAt          DateTime
+  assignedTo          String?
+  assignedAt          DateTime?
+  estimatedCompletion DateTime?
+  description         String
+  symptoms            String?
+  impact              String?
+  actions             String?
+  notes               String?
+  sparePartsNeeded    String?
+  partsUsed           String?
+  completionNotes     String?
+  completedAt         DateTime?
+  cost                Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model Contract {
