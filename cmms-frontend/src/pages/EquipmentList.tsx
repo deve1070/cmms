@@ -73,29 +73,7 @@ const EquipmentList: React.FC = () => {
   const sortedAndFilteredEquipment = React.useMemo(() => {
     let sortedItems = [...filteredEquipment];
     if (sortField) {
-      sortedItems.sort((a, b) => {
-        const valA = a[sortField];
-        const valB = b[sortField];
-
-        // Handle null or undefined values by pushing them to the end
-        if (valA == null && valB == null) return 0;
-        if (valA == null) return 1;
-        if (valB == null) return -1;
-
-        let comparison = 0;
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          comparison = valA.localeCompare(valB);
-        } else if (typeof valA === 'number' && typeof valB === 'number') {
-          comparison = valA - valB;
-        } else if (valA instanceof Date && valB instanceof Date) {
-          comparison = valA.getTime() - valB.getTime();
-        } else if (typeof valA === 'string' && Date.parse(valA) && typeof valB === 'string' && Date.parse(valB)) {
-          // Attempt to parse strings as dates if they look like dates (e.g. installationDate)
-          comparison = new Date(valA).getTime() - new Date(valB).getTime();
-        }
-
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
+      sortedItems = sortData(sortedItems, sortField, sortDirection);
     }
     return sortedItems;
   }, [filteredEquipment, sortField, sortDirection]);
@@ -132,6 +110,30 @@ const EquipmentList: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const sortData = (data: Equipment[], sortKey: keyof Equipment, sortDirection: 'asc' | 'desc') => {
+    return [...data].sort((a, b) => {
+      const valA = a[sortKey];
+      const valB = b[sortKey];
+      let comparison = 0;
+
+      if (valA === null || valA === undefined) {
+        comparison = 1;
+      } else if (valB === null || valB === undefined) {
+        comparison = -1;
+      } else if (typeof valA === 'string' && typeof valB === 'string') {
+        comparison = valA.localeCompare(valB);
+      } else if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
+      } else if (valA && valB && typeof valA === 'object' && typeof valB === 'object' && 'getTime' in valA && 'getTime' in valB) {
+        comparison = (valA as Date).getTime() - (valB as Date).getTime();
+      } else if (typeof valA === 'string' && Date.parse(valA) && typeof valB === 'string' && Date.parse(valB)) {
+        comparison = new Date(valA).getTime() - new Date(valB).getTime();
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
   };
 
   return (

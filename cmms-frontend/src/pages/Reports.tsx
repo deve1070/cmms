@@ -7,21 +7,7 @@ import {
   CalendarIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
-
-interface MaintenanceReport {
-  id: string;
-  title: string;
-  type: 'preventive' | 'corrective' | 'emergency';
-  status: 'completed' | 'in_progress' | 'pending';
-  equipmentId: string;
-  equipmentName: string;
-  technician: string;
-  startDate: string;
-  endDate: string;
-  description: string;
-  findings: string;
-  recommendations: string;
-}
+import { MaintenanceReport } from '../types/maintenance';
 
 const Reports: React.FC = () => {
   const navigate = useNavigate();
@@ -37,7 +23,7 @@ const Reports: React.FC = () => {
     const fetchReports = async () => {
       try {
         setIsLoading(true);
-        const data = await maintenanceApi.getAll({}) as MaintenanceReport[];
+        const data = await maintenanceApi.getAll({});
         setReports(data);
       } catch (error) {
         console.error('Error fetching reports:', error);
@@ -51,8 +37,8 @@ const Reports: React.FC = () => {
 
   const filteredReports = reports.filter(report => {
     const matchesType = filterType === 'all' || report.type === filterType;
-    const matchesDateRange = (!dateRange.start || new Date(report.startDate) >= new Date(dateRange.start)) &&
-                            (!dateRange.end || new Date(report.endDate) <= new Date(dateRange.end));
+    const matchesDateRange = (!dateRange.start || new Date(report.date) >= new Date(dateRange.start)) &&
+                            (!dateRange.end || new Date(report.date) <= new Date(dateRange.end));
     return matchesType && matchesDateRange;
   });
 
@@ -157,7 +143,7 @@ const Reports: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.equipmentName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.technician}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(report.startDate).toLocaleDateString()}
+                      {new Date(report.date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button

@@ -11,21 +11,10 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   BeakerIcon,
+  ChartBarIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
-
-interface MaintenanceReport {
-  id: string;
-  equipmentId: string;
-  type: 'preventive' | 'corrective';
-  status: 'pending' | 'in_progress' | 'completed';
-  description: string;
-  date: string;
-  equipment: {
-    model: string;
-    serialNumber: string;
-    location: string;
-  };
-}
+import { MaintenanceReport } from '../types/maintenance';
 
 const LabReports: React.FC = () => {
   const navigate = useNavigate();
@@ -34,13 +23,18 @@ const LabReports: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'preventive' | 'corrective'>('all');
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0],
+  });
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         setIsLoading(true);
-        const data = await maintenanceApi.getAll({}) as MaintenanceReport[];
-        setReports(data);
+        const data = await maintenanceApi.getAll();
+        setReports(data as MaintenanceReport[]);
       } catch (error) {
         console.error('Error fetching reports:', error);
         toast.error('Failed to fetch maintenance reports');
@@ -54,8 +48,8 @@ const LabReports: React.FC = () => {
 
   const filteredReports = reports.filter((report) => {
     const matchesSearch = 
-      report.equipment.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.equipment.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.equipment?.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.equipment?.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
@@ -168,8 +162,8 @@ const LabReports: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   {getTypeIcon(report.type)}
                   <div>
-                    <h3 className="font-semibold text-blue-900">{report.equipment.model}</h3>
-                    <p className="text-sm text-blue-600">S/N: {report.equipment.serialNumber}</p>
+                    <h3 className="font-semibold text-blue-900">{report.equipment?.model || 'Unknown Model'}</h3>
+                    <p className="text-sm text-blue-600">S/N: {report.equipment?.serialNumber || 'Unknown'}</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(report.status)}`}>
@@ -180,7 +174,7 @@ const LabReports: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center text-sm text-blue-600">
                   <BeakerIcon className="h-4 w-4 mr-2" />
-                  <span>{report.equipment.location}</span>
+                  <span>{report.equipment?.location || 'Unknown Location'}</span>
                 </div>
 
                 <div className="flex items-center text-sm text-blue-600">

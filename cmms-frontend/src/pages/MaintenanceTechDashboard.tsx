@@ -1,82 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { equipmentApi, workOrdersApi, maintenanceApi, sparePartsApi } from '../services/api';
+import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import {
-  WrenchIcon,
-  ClipboardDocumentListIcon,
-  ExclamationTriangleIcon,
   ChartBarIcon,
+  WrenchIcon,
+  CalendarIcon,
+  WrenchScrewdriverIcon,
+  ClipboardDocumentCheckIcon,
+  ClipboardDocumentListIcon,
+  ArchiveBoxArrowDownIcon,
+  PaperAirplaneIcon,
   UserCircleIcon,
   ArrowLeftOnRectangleIcon,
-  BellIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  CalendarIcon,
-  BuildingOfficeIcon,
-  PlusIcon,
   Bars3Icon,
   XMarkIcon,
-  WrenchScrewdriverIcon,
+  BellIcon,
   ArrowRightOnRectangleIcon,
-  ClipboardDocumentCheckIcon,
-  // CogIcon, // Removed as it's no longer used
-  ArchiveBoxArrowDownIcon, // Added for Quick Actions
-  PaperAirplaneIcon, // Added for Quick Actions
+  HomeIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
+import { useAuth } from '../contexts/AuthContext';
+import { equipmentApi, workOrdersApi, maintenanceApi, sparePartsApi } from '../services/api';
+import type { Equipment } from '../types/equipment';
+import type { WorkOrder } from '../types/workOrder';
+import type { MaintenanceReport } from '../types/maintenance';
+import type { SparePart } from '../types/sparePart';
 
-interface SidebarItem {
-  name: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  path: string;
-}
-
-interface Equipment {
-  id: string;
-  serialNumber: string;
-  model: string;
-  location: string;
-  status: string;
-  lastMaintenance: string;
-  nextMaintenance: string;
-}
-
-interface WorkOrder {
-  id: string;
-  equipmentId: string;
-  issue: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  assignedTo: string;
-  reportedBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface MaintenanceSchedule {
-  id: string;
-  equipmentId: string;
-  type: 'preventive' | 'corrective';
-  status: 'pending' | 'in_progress' | 'completed';
-  scheduledDate: string;
-  description: string;
-  equipment: {
-    model: string;
-    serialNumber: string;
-    location: string;
-  };
-}
-
-interface SparePart {
-  id: string;
-  name: string;
-  quantity: number;
-  minimumQuantity: number;
-  location: string;
-}
-
-const sidebarItems: SidebarItem[] = [
+const navigation = [
   { name: 'Dashboard', icon: ChartBarIcon, path: '/maintenance/dashboard' },
   { name: 'My Work Orders', icon: WrenchIcon, path: '/maintenance/work-orders' },
   { name: 'View Schedule', icon: CalendarIcon, path: '/maintenance/schedule' },
@@ -90,82 +41,83 @@ const MaintenanceTechDashboard: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [maintenanceSchedules, setMaintenanceSchedules] = useState<MaintenanceSchedule[]>([]);
+  const [maintenanceSchedules, setMaintenanceSchedules] = useState<MaintenanceReport[]>([]);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // console.log('MaintenanceTechDashboard component mounted'); // Removed as per instruction
-  // console.log('Current state:', { isLoading, error, user }); // Removed
-
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // console.log('Starting to fetch dashboard data...'); // Removed
         setIsLoading(true);
         setError(null);
 
+        // Check if user is authenticated
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please log in to access the dashboard');
+          navigate('/login', { replace: true });
+          return;
+        }
+
         // Fetch data in parallel
-        // console.log('Fetching equipment data...'); // Removed
-        const equipmentResponse = await equipmentApi.getAll().catch(err => {
-          console.error('Error fetching equipment:', err); // Kept error log
-          return [] as Equipment[];
-        }) as Equipment[];
-        // console.log('Equipment data:', equipmentResponse); // Removed
+        const [equipmentResponse, workOrdersResponse, maintenanceResponse, sparePartsResponse] = await Promise.all([
+          equipmentApi.getAll(),
+          workOrdersApi.getAll(),
+          maintenanceApi.getAll({}),
+          sparePartsApi.getAll()
+        ]);
 
-        // console.log('Fetching work orders data...'); // Removed
-        const workOrdersResponse = await workOrdersApi.getAll().catch(err => {
-          console.error('Error fetching work orders:', err); // Kept error log
-          return [] as WorkOrder[];
-        }) as WorkOrder[];
-        // console.log('Work orders data:', workOrdersResponse); // Removed
-        // TODO: If backend supports, filter work orders by assignee upon fetch. Otherwise, filter here if `assignedTo` field is available and matches current user.
-
-        // console.log('Fetching maintenance schedules data...'); // Removed
-        const maintenanceResponse = await maintenanceApi.getAll({}).catch(err => {
-          console.error('Error fetching maintenance schedules:', err); // Kept error log
-          return [] as MaintenanceSchedule[];
-        }) as MaintenanceSchedule[];
-        // console.log('Maintenance schedules data:', maintenanceResponse); // Removed
-
-        // console.log('Fetching spare parts data...'); // Removed
-        const sparePartsResponse = await sparePartsApi.getAll().catch(err => {
-          console.error('Error fetching spare parts:', err); // Kept error log
-          return [] as SparePart[];
-        }) as SparePart[];
-        // console.log('Spare parts data:', sparePartsResponse); // Removed
-
+        // Set state without type assertions
         setEquipment(equipmentResponse);
         setWorkOrders(workOrdersResponse);
         setMaintenanceSchedules(maintenanceResponse);
         setSpareParts(sparePartsResponse);
 
-        // Show success message if any data was loaded
-        // if ( // Simplified toast logic, assuming some data is usually expected.
-        //   equipmentResponse.length ||
-        //   workOrdersResponse.length ||
-        //   maintenanceResponse.length ||
-        //   sparePartsResponse.length
-        // ) {
-        //   toast.success('Dashboard data loaded successfully');
-        // } else {
-        //   console.log('No data was loaded from any API endpoint');
-        //   setError('No data available. Please try again later.');
-        // }
-        toast.success('Dashboard data refreshed'); // Restored a generic success toast
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error); // Kept error log
-        setError('Failed to load dashboard data. Please try again later.');
-        toast.error('Failed to load dashboard data');
+        console.log('Dashboard data loaded:', {
+          equipment: equipmentResponse,
+          workOrders: workOrdersResponse,
+          maintenance: maintenanceResponse,
+          spareParts: sparePartsResponse
+        });
+
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error);
+        if (error.response?.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          // Clear auth data and redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/login', { replace: true });
+        } else if (error.response?.status === 404) {
+          setError('No maintenance records found. This could be because no records have been created yet.');
+          // Set empty arrays for the data
+          setEquipment([]);
+          setWorkOrders([]);
+          setMaintenanceSchedules([]);
+          setSpareParts([]);
+        } else {
+          setError(error.response?.data?.error || 'Failed to load dashboard data. Please try again later.');
+        }
+        toast.error(error.response?.data?.error || 'Failed to load dashboard data');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [navigate]);
 
-  // Add a simple initial render to verify the component is working
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      toast.error('Failed to logout');
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -183,7 +135,6 @@ const MaintenanceTechDashboard: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-blue-600 font-medium">Loading dashboard data...</p>
-          <p className="text-sm text-gray-500 mt-2">Debug: Component is in loading state</p>
         </div>
       </div>
     );
@@ -193,7 +144,6 @@ const MaintenanceTechDashboard: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h3>
           <p className="text-red-600 mb-4">{error}</p>
           <button
@@ -206,36 +156,6 @@ const MaintenanceTechDashboard: React.FC = () => {
       </div>
     );
   }
-
-  // console.log('Rendering main dashboard content'); // Removed
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error('Error during logout:', error); // Kept error log
-      toast.error('Failed to logout');
-    }
-  };
-
-  // const handleQuickAction = (action: string) => { // Old handler removed
-  //   try {
-  //     switch (action) {
-  //       case 'view-schedule':
-  //         navigate('/maintenance/schedule');
-  //         break;
-  //       case 'update-spare-parts':
-  //         navigate('/maintenance/spare-parts');
-  //         break;
-  //       default:
-  //         console.warn('Unknown action:', action);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error handling quick action:', error);
-  //     toast.error('Failed to perform action');
-  //   }
-  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -261,7 +181,7 @@ const MaintenanceTechDashboard: React.FC = () => {
             </button>
           </div>
           <nav className="space-y-2">
-            {sidebarItems.map((item) => (
+            {navigation.map((item) => (
               <button
                 key={item.name}
                 onClick={() => navigate(item.path)}
@@ -274,17 +194,17 @@ const MaintenanceTechDashboard: React.FC = () => {
           </nav>
         </div>
         
-        <div className="absolute bottom-0 w-full p-6 border-t border-blue-100 bg-white/80 backdrop-blur">
+        <div className="absolute bottom-0 w-full p-6 border-t border-blue-100">
           <div className="flex items-center space-x-3 mb-4">
-            <UserCircleIcon className="h-8 w-8 text-blue-400" />
+            <UserCircleIcon className="h-8 w-8 text-blue-600" />
             <div>
-              <p className="font-semibold text-blue-900">{user?.name || user?.username || user?.email || "Maintenance User"}</p>
-              <p className="text-xs text-blue-500">Maintenance Technician</p>
+              <p className="font-medium text-blue-800">{user?.name || user?.username || user?.email || "Maintenance Tech"}</p>
+              <p className="text-sm text-blue-600">Maintenance Technician</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-3 w-full p-3 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all font-semibold shadow-sm"
+            className="flex items-center space-x-3 w-full p-3 rounded-xl text-blue-800 font-medium hover:bg-red-50 hover:text-red-600 transition-all shadow-sm"
           >
             <ArrowLeftOnRectangleIcon className="h-6 w-6" />
             <span>Logout</span>
@@ -294,196 +214,192 @@ const MaintenanceTechDashboard: React.FC = () => {
 
       {/* Main Content */}
       <div className={`transition-all duration-300 ${isSidebarOpen ? 'ml-72' : 'ml-0'}`}>
-        {/* Top Navigation Bar */}
-        <nav className="bg-white/80 backdrop-blur shadow-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16 items-center">
-              <div className="flex items-center">
-                <button
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className="p-2 rounded-lg hover:bg-blue-100 mr-4 transition-colors duration-200"
-                  aria-label="Toggle sidebar"
-                >
-                  <Bars3Icon className="h-6 w-6 text-blue-600" />
-                </button>
-                <span className="text-2xl font-extrabold text-blue-800 tracking-tight">Maintenance Dashboard</span>
-              </div>
-              <div className="flex items-center space-x-4">
-                <button className="p-2 rounded-full hover:bg-blue-100 relative transition-colors">
-                  <BellIcon className="h-6 w-6 text-blue-600" />
-                  <span className="absolute top-0 right-0 h-4 w-4 bg-gradient-to-br from-red-500 to-pink-500 rounded-full text-xs text-white flex items-center justify-center shadow-md">
-                    {workOrders.filter(wo => wo.status === 'pending').length}
-                  </span>
-                </button>
-              </div>
+        <header className="bg-white shadow-sm">
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
+                aria-label="Toggle sidebar"
+              >
+                <Bars3Icon className="h-6 w-6" />
+              </button>
+              <h1 className="text-2xl font-bold text-blue-800 ml-4">Maintenance Dashboard</h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors relative">
+                <BellIcon className="h-6 w-6" />
+                <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                  {workOrders.filter(wo => wo.status === 'pending').length}
+                </span>
+              </button>
             </div>
           </div>
-        </nav>
+        </header>
 
-        {/* Dashboard Content */}
         <main className="p-6">
-          {/* Dashboard Stats */}
-          <section className="mb-8">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">My Performance Overview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100">
-                <h3 className="text-sm font-medium text-gray-500">My Open Work Orders</h3>
-                {/* Assuming user.username or user.id is available for matching assignedTo */}
-                <p className="mt-1 text-3xl font-semibold text-blue-900">
-                  {workOrders.filter(wo => wo.assignedTo === user?.username && (wo.status === 'pending' || wo.status === 'in_progress')).length}
-                </p>
-              </div>
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100">
-                <h3 className="text-sm font-medium text-gray-500">Tasks Completed This Week</h3>
-                {/* Implement logic to count tasks completed by this user this week. */}
-                <p className="mt-1 text-3xl font-semibold text-blue-900">N/A</p>
-              </div>
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100">
-                <h3 className="text-sm font-medium text-gray-500">Low Stock Alerts</h3>
-                <p className="mt-1 text-3xl font-semibold text-red-600">
-                  {spareParts.filter(part => part.quantity <= part.minimumQuantity).length}
-                </p>
-              </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
-          </section>
-
-          {/* Quick Actions */}
-          <section className="mb-8">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-               <button
-                onClick={() => navigate('/maintenance/work-orders')}
-                className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
-              >
-                <ClipboardDocumentListIcon className="h-6 w-6" />
-                <span className="font-medium">View My Work Orders</span>
-              </button>
+          ) : error ? (
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h3>
+              <p className="text-red-600 mb-4">{error}</p>
               <button
-                onClick={() => navigate('/maintenance/spare-parts')} // Navigate to spare parts, specific log page can be sub-route
-                className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
               >
-                <ArchiveBoxArrowDownIcon className="h-6 w-6" />
-                <span className="font-medium">Log Part Usage</span>
-              </button>
-              <button
-                onClick={() => navigate('/maintenance/spare-parts')} // Navigate to spare parts, specific request page can be sub-route
-                className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
-              >
-                <PaperAirplaneIcon className="h-6 w-6" />
-                <span className="font-medium">Request Part Restock</span>
+                Try Again
               </button>
             </div>
-          </section>
-
-          {/* Work Orders Section */}
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">Recent Work Orders</h2>
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {/* TODO: Filter these work orders to show only those assigned to the current technician OR clearly indicate if these are all recent WOs in the system. */}
-                    {workOrders.slice(0, 5).map((order) => (
-                      <tr key={order.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-900">{order.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {equipment.find(e => e.id === order.equipmentId)?.model || 'Unknown'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{order.issue}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              order.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                              order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'}`}>
-                            {order.status.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => navigate(`/maintenance/work-orders/${order.id}`)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            Details
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Maintenance Schedule Section */}
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">Upcoming Maintenance</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {maintenanceSchedules.slice(0, 6).map((schedule) => (
-                <div key={schedule.id} className="bg-white rounded-xl shadow-sm p-4 border border-blue-100">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-medium text-blue-900">{schedule.equipment.model}</h3>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full
-                      ${schedule.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        schedule.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'}`}>
-                      {schedule.status.replace('_', ' ')}
-                    </span>
+          ) : (
+            <>
+              {/* Dashboard Stats */}
+              <section className="mb-8">
+                <h2 className="text-xl font-bold text-blue-800 mb-4">My Performance Overview</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
+                    <h3 className="text-sm font-medium text-gray-500">My Open Work Orders</h3>
+                    <p className="mt-1 text-3xl font-semibold text-blue-800">
+                      {workOrders.filter(wo => wo.assignedTo === user?.username && (wo.status === 'pending' || wo.status === 'in_progress')).length}
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{schedule.description}</p>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <CalendarIcon className="h-4 w-4 mr-1" />
-                    {new Date(schedule.scheduledDate).toLocaleDateString()}
+                  <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
+                    <h3 className="text-sm font-medium text-gray-500">Tasks Completed This Week</h3>
+                    <p className="mt-1 text-3xl font-semibold text-blue-800">
+                      {workOrders.filter(wo => 
+                        wo.assignedTo === user?.username && 
+                        wo.status === 'completed' && 
+                        new Date(wo.completedAt || '').getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000
+                      ).length}
+                    </p>
+                  </div>
+                  <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
+                    <h3 className="text-sm font-medium text-gray-500">Low Stock Alerts</h3>
+                    <p className="mt-1 text-3xl font-semibold text-red-600">
+                      {spareParts.filter(part => part.quantity <= part.minimumQuantity).length}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </section>
 
-          {/* Spare Parts Section */}
-          <div>
-            <h2 className="text-xl font-bold text-blue-900 mb-4">Low Stock Spare Parts</h2>
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minimum</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {spareParts
-                      .filter(part => part.quantity <= part.minimumQuantity)
-                      .slice(0, 5)
-                      .map((part) => (
-                        <tr key={part.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-900">{part.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{part.quantity}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{part.minimumQuantity}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{part.location}</td>
+              {/* Quick Actions */}
+              <section className="mb-8">
+                <h2 className="text-xl font-bold text-blue-800 mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button
+                    onClick={() => navigate('/maintenance/work-orders')}
+                    className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
+                  >
+                    <ClipboardDocumentListIcon className="h-6 w-6" />
+                    <span className="font-medium">View My Work Orders</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/maintenance/spare-parts')}
+                    className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
+                  >
+                    <ArchiveBoxArrowDownIcon className="h-6 w-6" />
+                    <span className="font-medium">Log Part Usage</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/maintenance/spare-parts')}
+                    className="flex items-center justify-center space-x-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-blue-100 text-blue-700 hover:text-blue-900"
+                  >
+                    <PaperAirplaneIcon className="h-6 w-6" />
+                    <span className="font-medium">Request Part Restock</span>
+                  </button>
+                </div>
+              </section>
+
+              {/* Recent Work Orders */}
+              <section className="mb-8">
+                <h2 className="text-xl font-bold text-blue-800 mb-4">Recent Work Orders</h2>
+                <div className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                         </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {workOrders
+                          .filter(wo => wo.assignedTo === user?.username)
+                          .slice(0, 5)
+                          .map((workOrder) => (
+                            <tr key={workOrder.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-800">{workOrder.id}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {equipment.find(e => e.id === workOrder.equipmentId)?.name || 'Unknown Equipment'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{workOrder.description}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  'completed' ? 'bg-green-100 text-green-800' :
+                                  'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {'completed'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{workOrder.priority}</td>
+                            </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+
+              {/* Upcoming Maintenance */}
+              <section>
+                <h2 className="text-xl font-bold text-blue-800 mb-4">Upcoming Maintenance</h2>
+                <div className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {maintenanceSchedules
+                          .slice(0, 5)
+                          .map((schedule) => (
+                            <tr key={schedule.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-800">
+                                {equipment.find(e => e.id === schedule.equipmentId)?.name || 'Unknown Equipment'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{schedule.type}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(schedule.date).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  'completed' ? 'bg-green-100 text-green-800' :
+                                  'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {'completed'}
+                                </span>
+                              </td>
+                            </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
         </main>
       </div>
     </div>

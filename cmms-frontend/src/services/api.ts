@@ -3,6 +3,10 @@ import { User, LoginCredentials, LoginResponse } from '../types/auth';
 import { Budget } from '../types/budget';
 import { ComplianceRequirement } from '../types/compliance';
 import { Contract } from '../types/contract';
+import { Equipment } from '../types/equipment';
+import { WorkOrder } from '../types/workOrder';
+import { MaintenanceSchedule, MaintenanceReport } from '../types/maintenance';
+import { SparePart } from '../types/sparePart';
 
 const API_URL = 'http://localhost:3000/api';
 
@@ -28,8 +32,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only clear auth if we're not already on the login page
+      if (!window.location.pathname.includes('/login')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -43,8 +51,8 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
 
 // Equipment API
 export const equipmentApi = {
-  getAll: async () => {
-    const response = await api.get('/equipment');
+  getAll: async (): Promise<Equipment[]> => {
+    const response = await api.get<Equipment[]>('/equipment');
     return response.data;
   },
   getById: async (id: string) => {
@@ -71,8 +79,8 @@ export const equipmentApi = {
 
 // Work Orders API
 export const workOrdersApi = {
-  getAll: async () => {
-    const response = await api.get('/work-orders');
+  getAll: async (): Promise<WorkOrder[]> => {
+    const response = await api.get<WorkOrder[]>('/work-orders');
     return response.data;
   },
   getById: async (id: string) => {
@@ -91,6 +99,13 @@ export const workOrdersApi = {
     const response = await api.delete(`/work-orders/${id}`);
     return response.data;
   },
+  logPartUsage: async (workOrderId: string, partId: string, quantity: number) => {
+    const response = await api.post(`/work-orders/${workOrderId}/parts`, {
+      partId,
+      quantity
+    });
+    return response.data;
+  }
 };
 
 // Reports API
@@ -150,9 +165,28 @@ export const usersApi = {
 
 // Maintenance History API
 export const maintenanceApi = {
-  getAll: async (params: any) => {
-    const response = await api.get('/maintenance', { params });
-    return response.data;
+  getAll: async (params?: Record<string, any>): Promise<MaintenanceReport[]> => {
+    try {
+      console.log('Fetching maintenance reports with params:', params);
+      const response = await api.get('/maintenance', { params });
+      console.log('Maintenance reports response:', response);
+      const data = response.data as any[];
+      return data.map((report) => ({
+        ...report,
+        findings: report.findings || '',
+        recommendations: report.recommendations || '',
+        equipment: {
+          id: report.equipmentId,
+          name: report.equipment?.name || 'Unknown',
+          model: report.equipment?.model || 'Unknown',
+          serialNumber: report.equipment?.serialNumber || 'Unknown',
+          location: report.equipment?.location || 'Unknown'
+        }
+      }));
+    } catch (error) {
+      console.error('Error in maintenanceApi.getAll:', error);
+      throw error;
+    }
   },
   getById: async (id: string) => {
     const response = await api.get(`/maintenance/${id}`);
@@ -169,12 +203,15 @@ export const maintenanceApi = {
   delete: async (id: string) => {
     const response = await api.delete(`/maintenance/${id}`);
     return response.data;
-  },
+  }
 };
 
 // Spare Parts API
 export const sparePartsApi = {
-  getAll: () => api.get('/spare-parts').then(res => res.data),
+  getAll: async (): Promise<SparePart[]> => {
+    const response = await api.get<SparePart[]>('/spare-parts');
+    return response.data;
+  },
   getById: (id: string) => api.get(`/spare-parts/${id}`).then(res => res.data),
   create: (data: {
     name: string;

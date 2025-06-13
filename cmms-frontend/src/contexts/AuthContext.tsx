@@ -29,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(parsedUser);
         setIsAuthenticated(true);
       } catch (e) {
+        console.error('Error parsing stored user:', e);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
@@ -46,11 +47,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         navigate('/login', { replace: true });
       } else if (isAuthenticated && isPublicRoute) {
         const userRole = user?.role.toLowerCase();
+        console.log('User role:', userRole); // Debug log
         const dashboardPath = userRole === 'admin' ? '/admin/dashboard' :
                             userRole === 'engineer for maintenance' ? '/maintenance/dashboard' :
                             userRole === 'laboratory technician' ? '/lab/dashboard' :
                             userRole === 'biomedical engineer' ? '/biomedical/dashboard' :
                             '/welcome';
+        console.log('Redirecting to:', dashboardPath); // Debug log
         navigate(dashboardPath, { replace: true });
       }
     }
@@ -63,18 +66,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiLogin(credentials);
       const { token, user } = response;
       
+      // Store auth data
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       
+      // Update state
       setUser(user);
       setIsAuthenticated(true);
+
+      // Get the correct dashboard path
+      const userRole = user.role.toLowerCase();
+      const dashboardPath = userRole === 'admin' ? '/admin/dashboard' :
+                          userRole === 'engineer for maintenance' ? '/maintenance/dashboard' :
+                          userRole === 'laboratory technician' ? '/lab/dashboard' :
+                          userRole === 'biomedical engineer' ? '/biomedical/dashboard' :
+                          '/welcome';
+      
+      // Navigate to dashboard
+      navigate(dashboardPath, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');

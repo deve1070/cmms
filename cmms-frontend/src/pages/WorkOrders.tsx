@@ -1,55 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { workOrdersApi } from '../services/api';
+import { workOrdersApi, sparePartsApi } from '../services/api';
 import {
+  ArrowPathIcon,
   PlusIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ExclamationTriangleIcon,
   ChevronUpDownIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
-
-interface WorkOrder {
-  id: string;
-  equipmentId: string;
-  issue: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  assignedTo: string;
-  reportedBy: string;
-  createdAt: string;
-  updatedAt: string;
-  type?: string;      // Added
-  priority?: string;  // Added
-}
+import { toast } from 'react-hot-toast';
+import { WorkOrder } from '../types/workOrder';
+import { SparePart } from '../types/sparePart';
 
 const WorkOrders: React.FC = () => {
   const navigate = useNavigate();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all'); // New filter
-  const [filterType, setFilterType] = useState('all');         // New filter
-  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false); // New filter
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const [sortField, setSortField] = useState<keyof WorkOrder | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  const [selectedPart, setSelectedPart] = useState('');
+  const [partQuantity, setPartQuantity] = useState(1);
 
   useEffect(() => {
-    const fetchWorkOrders = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const data = await workOrdersApi.getAll() as WorkOrder[];
-        setWorkOrders(data);
+        const [workOrdersData, sparePartsData] = await Promise.all([
+          workOrdersApi.getAll(),
+          sparePartsApi.getAll()
+        ]);
+        setWorkOrders(workOrdersData);
+        setSpareParts(sparePartsData);
       } catch (error) {
-        console.error('Error fetching work orders:', error);
+        console.error('Error fetching data:', error);
+        toast.error('Failed to load data');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchWorkOrders();
+    fetchData();
   }, []);
+
+  const handleLogPartUsage = async (workOrderId: string) => {
+    try {
+      if (!selectedPart || partQuantity <= 0) {
+        toast.error('Please select a part and enter a valid quantity');
+        return;
+      }
+
+      await workOrdersApi.logPartUsage(workOrderId, selectedPart, partQuantity);
+      
+      // Update the work order in the list
+      setWorkOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === workOrderId 
+            ? {
+                ...order,
+                partsUsed: [
+                  ...(order.partsUsed || []),
+                  {
+                    partId: selectedPart,
+                    quantity: partQuantity,
+                    partName: spareParts.find(p => p.id === selectedPart)?.name
+                  }
+                ]
+              }
+            : order
+        )
+      );
+
+      toast.success('Part usage logged successfully');
+      setSelectedPart('');
+      setPartQuantity(1);
+      setSelectedWorkOrder(null);
+    } catch (error) {
+      console.error('Error logging part usage:', error);
+      toast.error('Failed to log part usage');
+    }
+  };
 
   const filteredWorkOrders = workOrders.filter(item => {
     const searchString = searchTerm.toLowerCase();
@@ -76,26 +117,7 @@ const WorkOrders: React.FC = () => {
   const sortedAndFilteredWorkOrders = React.useMemo(() => {
     let sortedItems = [...filteredWorkOrders];
     if (sortField) {
-      sortedItems.sort((a, b) => {
-        const valA = a[sortField];
-        const valB = b[sortField];
-
-        if (valA == null && valB == null) return 0;
-        if (valA == null) return 1;
-        if (valB == null) return -1;
-
-        let comparison = 0;
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          comparison = valA.localeCompare(valB);
-        } else if (typeof valA === 'number' && typeof valB === 'number') {
-          comparison = valA - valB;
-        } else if (valA instanceof Date && valB instanceof Date) {
-          comparison = valA.getTime() - valB.getTime();
-        } else if (typeof valA === 'string' && Date.parse(valA) && typeof valB === 'string' && Date.parse(valB)) {
-          comparison = new Date(valA).getTime() - new Date(valB).getTime();
-        }
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
+      sortedItems = sortData(sortedItems, sortField, sortDirection);
     }
     return sortedItems;
   }, [filteredWorkOrders, sortField, sortDirection]);
@@ -133,17 +155,34 @@ const WorkOrders: React.FC = () => {
     }
   };
 
+  const sortData = (data: WorkOrder[], sortKey: keyof WorkOrder, sortDirection: 'asc' | 'desc') => {
+    return [...data].sort((a, b) => {
+      const valA = a[sortKey];
+      const valB = b[sortKey];
+      let comparison = 0;
+
+      if (valA === null || valA === undefined) {
+        comparison = 1;
+      } else if (valB === null || valB === undefined) {
+        comparison = -1;
+      } else if (typeof valA === 'string' && typeof valB === 'string') {
+        comparison = valA.localeCompare(valB);
+      } else if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
+      } else if (valA && valB && typeof valA === 'object' && typeof valB === 'object' && 'getTime' in valA && 'getTime' in valB) {
+        comparison = (valA as Date).getTime() - (valB as Date).getTime();
+      } else if (typeof valA === 'string' && Date.parse(valA) && typeof valB === 'string' && Date.parse(valB)) {
+        comparison = new Date(valA).getTime() - new Date(valB).getTime();
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-        <button
-          onClick={() => navigate('/work-orders/new')} // Updated navigation
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <PlusIcon className="h-5 w-5 mr-2 stroke-1" />
-          New Work Order
-        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -151,13 +190,12 @@ const WorkOrders: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div className="lg:col-span-2">
             <div className="relative">
-              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 stroke-1" />
               <input
                 type="text"
                 placeholder="Search work orders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -253,6 +291,9 @@ const WorkOrders: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     <button onClick={() => handleSort('updatedAt')} className="flex items-center hover:text-blue-600">Updated <SortIndicator fieldName="updatedAt" /></button>
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -279,6 +320,20 @@ const WorkOrders: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.status === 'in_progress' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedWorkOrder(item);
+                          }}
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          <WrenchScrewdriverIcon className="h-4 w-4 mr-1" />
+                          Log Part Usage
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -286,6 +341,56 @@ const WorkOrders: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Part Usage Modal */}
+      {selectedWorkOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold mb-4">Log Part Usage</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Part</label>
+                <select
+                  value={selectedPart}
+                  onChange={(e) => setSelectedPart(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option value="">Select a part</option>
+                  {spareParts.map(part => (
+                    <option key={part.id} value={part.id}>
+                      {part.name} (Available: {part.quantity})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={partQuantity}
+                  onChange={(e) => setPartQuantity(parseInt(e.target.value))}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setSelectedWorkOrder(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleLogPartUsage(selectedWorkOrder.id)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  Log Usage
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

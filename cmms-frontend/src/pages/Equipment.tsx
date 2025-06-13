@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { equipmentApi } from '../services/api';
 import { toast } from 'react-hot-toast';
@@ -110,11 +110,10 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ action, equipmentId }) =>
       setHistoryLoading(true);
       try {
         const historyData = await equipmentApi.getMaintenanceHistory(id);
-        setMaintenanceHistory(historyData || []);
+        setMaintenanceHistory(historyData as MaintenanceHistoryItem[] || []);
       } catch (historyErr) {
         console.error('Error fetching maintenance history:', historyErr);
         toast.error('Failed to load maintenance history.');
-        setMaintenanceHistory([]);
       } finally {
         setHistoryLoading(false);
       }
@@ -233,37 +232,18 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ action, equipmentId }) =>
   return (
     <>
       {/* Print Styles */}
-      <style jsx global>{`
+      <style>{`
         @media print {
           body * {
             visibility: hidden;
           }
-          .printable-section, .printable-section * {
+          #print-section, #print-section * {
             visibility: visible;
           }
-          .printable-section {
+          #print-section {
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
-            padding: 20px; /* Add some padding for print */
-            border: none; /* Remove borders for print */
-            box-shadow: none; /* Remove shadows for print */
-          }
-          .no-print {
-            display: none !important;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-          }
-          thead {
-            background-color: #f2f2f2;
           }
         }
       `}</style>

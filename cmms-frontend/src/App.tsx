@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import BiomedicalLayout from './components/BiomedicalLayout';
 
 // Public pages
 import Welcome from './pages/Welcome';
@@ -22,7 +23,7 @@ import WorkOrders from './pages/WorkOrders';
 import ReportMaintenance from './pages/ReportMaintenance';
 import MaintenanceTechDashboard from './pages/MaintenanceTechDashboard';
 import NewWorkOrder from './pages/NewWorkOrder';
-import MaintenanceSchedule from './pages/MaintenanceSchedule';
+import MaintenanceScheduleView from './pages/MaintenanceSchedulePage';
 import MaintenanceReports from './pages/MaintenanceReports';
 
 // Lab Tech pages
@@ -30,6 +31,12 @@ import LabTechDashboard from './pages/LabTechDashboard';
 import LabEquipmentList from './pages/LabEquipmentList';
 import ReportIssue from './pages/ReportIssue';
 import LabReports from './pages/LabReports';
+
+// Biomedical Engineer pages
+import BiomedicalEngineerDashboard from './pages/BiomedicalEngineerDashboard';
+import BiomedicalEquipmentList from './pages/BiomedicalEquipmentList';
+import BiomedicalWorkOrders from './pages/BiomedicalWorkOrders';
+import BiomedicalReports from './pages/BiomedicalReports';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({
   children,
@@ -46,8 +53,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string
   }
 
   // Normalize roles for comparison
-  const userRole = user.role.toLowerCase();
-  const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
+  const userRole = user.role.toLowerCase().trim();
+  const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase().trim());
 
   if (!normalizedAllowedRoles.includes(userRole)) {
     // Redirect to appropriate dashboard based on role
@@ -171,7 +178,7 @@ const App: React.FC = () => {
         <Route
           path="/maintenance/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer', 'engineer for maintenance']}>
               <MaintenanceTechDashboard />
             </ProtectedRoute>
           }
@@ -179,7 +186,7 @@ const App: React.FC = () => {
         <Route
           path="/maintenance/work-orders"
           element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer', 'engineer for maintenance']}>
               <WorkOrders />
             </ProtectedRoute>
           }
@@ -187,7 +194,7 @@ const App: React.FC = () => {
         <Route
           path="/maintenance/work-orders/new"
           element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
+            <ProtectedRoute allowedRoles={['maintenance', 'engineer', 'engineer for maintenance']}>
               <NewWorkOrder />
             </ProtectedRoute>
           }
@@ -196,7 +203,7 @@ const App: React.FC = () => {
           path="/maintenance/schedule"
           element={
             <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
-              <MaintenanceSchedule />
+              <MaintenanceScheduleView />
             </ProtectedRoute>
           }
         />
@@ -247,6 +254,58 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute allowedRoles={['laboratory technician']}>
               <LabReports />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Biomedical Engineer routes */}
+        <Route
+          path="/biomedical/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['biomedical engineer']}>
+              <BiomedicalLayout>
+                <BiomedicalEngineerDashboard />
+              </BiomedicalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/biomedical/equipment"
+          element={
+            <ProtectedRoute allowedRoles={['biomedical engineer']}>
+              <BiomedicalLayout>
+                <BiomedicalEquipmentList />
+              </BiomedicalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/biomedical/work-orders"
+          element={
+            <ProtectedRoute allowedRoles={['biomedical engineer']}>
+              <BiomedicalLayout>
+                <BiomedicalWorkOrders />
+              </BiomedicalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/biomedical/work-orders/new"
+          element={
+            <ProtectedRoute allowedRoles={['biomedical engineer']}>
+              <BiomedicalLayout>
+                <NewWorkOrder />
+              </BiomedicalLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/biomedical/reports"
+          element={
+            <ProtectedRoute allowedRoles={['biomedical engineer']}>
+              <BiomedicalLayout>
+                <BiomedicalReports />
+              </BiomedicalLayout>
             </ProtectedRoute>
           }
         />

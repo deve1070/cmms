@@ -12,48 +12,35 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
-
-interface Equipment {
-  id: string;
-  serialNumber: string;
-  model: string;
-  location: string;
-  status: string;
-  lastMaintenance: string;
-  nextMaintenance: string;
-}
-
-interface MaintenanceRecord {
-  id: string;
-  equipmentId: string;
-  type: 'preventive' | 'corrective';
-  status: 'pending' | 'in_progress' | 'completed';
-  description: string;
-  date: string;
-}
+import { Equipment } from '../types/equipment';
+import { MaintenanceReport } from '../types/maintenance';
 
 const LabEquipmentList: React.FC = () => {
   const navigate = useNavigate();
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceReport[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        setError(null);
+
         const [equipmentData, maintenanceData] = await Promise.all([
-          equipmentApi.getAll() as Promise<Equipment[]>,
-          maintenanceApi.getAll({}) as Promise<MaintenanceRecord[]>,
+          equipmentApi.getAll(),
+          maintenanceApi.getAll({})
         ]);
 
-        setEquipment(equipmentData);
-        setMaintenanceRecords(maintenanceData);
+        setEquipment(equipmentData as Equipment[]);
+        setMaintenanceRecords(maintenanceData as MaintenanceReport[]);
+
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast.error('Failed to fetch equipment data');
+        setError('Failed to load data. Please try again later.');
       } finally {
         setIsLoading(false);
       }
@@ -179,12 +166,12 @@ const LabEquipmentList: React.FC = () => {
 
                   <div className="flex items-center text-sm text-blue-600">
                     <CalendarIcon className="h-4 w-4 mr-2" />
-                    <span>Last Maintenance: {new Date(item.lastMaintenance).toLocaleDateString()}</span>
+                    <span>Last Maintenance: {item.lastMaintenance ? new Date(item.lastMaintenance).toLocaleDateString() : 'Not scheduled'}</span>
                   </div>
 
                   <div className="flex items-center text-sm text-blue-600">
                     <ClockIcon className="h-4 w-4 mr-2" />
-                    <span>Next Maintenance: {new Date(item.nextMaintenance).toLocaleDateString()}</span>
+                    <span>Next Maintenance: {item.nextMaintenance ? new Date(item.nextMaintenance).toLocaleDateString() : 'Not scheduled'}</span>
                   </div>
 
                   {maintenance && (
