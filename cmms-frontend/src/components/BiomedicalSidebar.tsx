@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   BarChart3,
@@ -8,23 +8,12 @@ import {
   Plus,
   ClipboardCheck,
   User as UserIcon,
-  LogOut,
 } from 'lucide-react';
 
 const BiomedicalSidebar: React.FC = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  if (!user || user.role.toLowerCase() !== 'biomedical_engineer') return null;
+  if (!user || user.role.toLowerCase() !== 'biomedical engineer') return null;
 
   const navItems = [
     { name: 'Dashboard', icon: BarChart3, path: '/biomedical/dashboard' },
@@ -50,13 +39,6 @@ const BiomedicalSidebar: React.FC = () => {
           <span>{item.name}</span>
         </Link>
       ))}
-      <button
-        onClick={handleLogout}
-        className="flex items-center space-x-2 p-3 rounded-lg text-gray-700 hover:bg-red-100 hover:text-red-700 transition-colors mt-auto"
-      >
-        <LogOut className="h-5 w-5" />
-        <span>Logout</span>
-      </button>
     </nav>
   );
 };

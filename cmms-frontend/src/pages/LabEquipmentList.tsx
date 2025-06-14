@@ -79,7 +79,7 @@ const LabEquipmentList: React.FC = () => {
 
     return {
       status: record.status,
-      date: record.date,
+      date: record.createdAt,
       description: record.description,
     };
   };
@@ -179,11 +179,11 @@ const LabEquipmentList: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-blue-900">Maintenance Status</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          maintenance.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          maintenance.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                          maintenance.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                          maintenance.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {maintenance.status ? maintenance.status.replace('_', ' ') : 'Unknown'}
+                          {maintenance.status}
                         </span>
                       </div>
                       <p className="text-sm text-blue-600">{maintenance.description}</p>

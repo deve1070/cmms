@@ -8,6 +8,8 @@ import {
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { getUserDisplayName } from '../types/auth';
 import BiomedicalLayout from '../components/BiomedicalLayout';
 
 interface Report {
@@ -22,6 +24,7 @@ interface Report {
 }
 
 const BiomedicalReports: React.FC = () => {
+  const { user } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,7 +97,10 @@ const BiomedicalReports: React.FC = () => {
   const uniqueTypes = ['all', ...Array.from(new Set(reports.map(report => report.type)))];
 
   return (
-    <BiomedicalLayout>
+    <BiomedicalLayout
+      title="Maintenance Reports"
+      userDisplayName={getUserDisplayName(user, 'Biomedical Engineer')}
+    >
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Reports</h1>

@@ -208,6 +208,13 @@ export const maintenanceApi = {
   delete: async (id: string) => {
     const response = await api.delete(`/maintenance/${id}`);
     return response.data;
+  },
+  exportReports: async (params: { timeRange: string }): Promise<Blob> => {
+    const response = await api.get('/maintenance/export', {
+      params,
+      responseType: 'blob'
+    });
+    return response.data as Blob;
   }
 };
 

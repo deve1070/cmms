@@ -20,6 +20,7 @@ import MaintenanceScheduleView from './pages/MaintenanceScheduleView';
 import SpareParts from './pages/SpareParts';
 import MaintenanceReports from './pages/MaintenanceReports';
 import MaintenanceTechDashboard from './pages/MaintenanceTechDashboard';
+import LabTechDashboard from './pages/LabTechDashboard';
 
 // Error Boundary Component
 interface ErrorBoundaryState {
@@ -148,6 +149,16 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/biomedical/reports"
+          element={
+            <ProtectedRoute allowedRoles={['biomedical engineer']}>
+              <BiomedicalLayout>
+                <MaintenanceReports />
+              </BiomedicalLayout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Maintenance routes */}
         <Route
@@ -216,9 +227,7 @@ const App: React.FC = () => {
           path="/lab/dashboard"
           element={
             <ProtectedRoute allowedRoles={['laboratory technician']}>
-              <BiomedicalLayout>
-                <BiomedicalEngineerDashboard />
-              </BiomedicalLayout>
+              <LabTechDashboard />
             </ProtectedRoute>
           }
         />

@@ -8,6 +8,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { MaintenanceReport } from '../types/maintenance';
+import { Button } from '../components/ui/button';
 
 const Reports: React.FC = () => {
   const navigate = useNavigate();
@@ -37,8 +38,8 @@ const Reports: React.FC = () => {
 
   const filteredReports = reports.filter(report => {
     const matchesType = filterType === 'all' || report.type === filterType;
-    const matchesDateRange = (!dateRange.start || new Date(report.date) >= new Date(dateRange.start)) &&
-                            (!dateRange.end || new Date(report.date) <= new Date(dateRange.end));
+    const matchesDateRange = (!dateRange.start || new Date(report.createdAt) >= new Date(dateRange.start)) &&
+                            (!dateRange.end || new Date(report.createdAt) <= new Date(dateRange.end));
     return matchesType && matchesDateRange;
   });
 
@@ -58,6 +59,11 @@ const Reports: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleViewDetails = (report: MaintenanceReport) => {
+    // Implement view details functionality
+    console.log('Viewing details for report:', report);
   };
 
   return (
@@ -128,7 +134,7 @@ const Reports: React.FC = () => {
                 {filteredReports.map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{report.title}</div>
+                      <div className="text-sm font-medium text-gray-900">{report.description}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
@@ -140,19 +146,19 @@ const Reports: React.FC = () => {
                         {report.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.equipmentName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.technician}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.equipment.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.performedBy.username}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(report.date).toLocaleDateString()}
+                      {new Date(report.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleDownloadReport(report.id)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center"
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(report)}
                       >
-                        <Download className="h-5 w-5 mr-1" />
-                        Download
-                      </button>
+                        View Details
+                      </Button>
                     </td>
                   </tr>
                 ))}

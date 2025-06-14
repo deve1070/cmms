@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useNavigate } from 'react-router-dom';
 import { User, LoginCredentials, mapToFrontendRole } from '../types/auth';
 
+const API_URL = 'http://localhost:3002';
+
 interface LoginResponse {
   token: string;
   user: User;
@@ -27,25 +29,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-    const baseUrl = 'http://localhost:3002';
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const token = user.token;
-
+    const token = localStorage.getItem('token');
     const headers = {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     };
 
-    const response = await fetch(`${baseUrl}${endpoint}`, {
+    const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
-      credentials: 'include',
       headers,
+      credentials: 'include',
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'An error occurred');
+      throw new Error(`API request failed: ${response.statusText}`);
     }
 
     return response.json();

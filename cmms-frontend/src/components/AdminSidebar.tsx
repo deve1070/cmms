@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Users,
-  Cube,
+  Box,
   FileText,
   ClipboardCheck,
   BarChart3,
@@ -29,7 +29,7 @@ const AdminSidebar: React.FC = () => {
   const navItems = [
     { name: 'Overview', icon: BarChart3, path: '/admin/dashboard' },
     { name: 'User Management', icon: Users, path: '/admin/users' },
-    { name: 'Equipment Management', icon: Cube, path: '/admin/equipment' },
+    { name: 'Equipment Management', icon: Box, path: '/admin/equipment' },
     { name: 'Repair Requests', icon: FileText, path: '/admin/repair-requests' },
     { name: 'Maintenance Reports', icon: ClipboardCheck, path: '/admin/maintenance-reports' },
     { name: 'Budgets', icon: Users, path: '/admin/budgets' },

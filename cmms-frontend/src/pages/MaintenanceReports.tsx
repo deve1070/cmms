@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import {
   Select,
@@ -21,34 +22,129 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { maintenanceApi } from '../services/api';
+import { toast } from 'react-hot-toast';
+import type { MaintenanceReport } from '../types/maintenance';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-const mockData = {
-  monthlyStats: [
-    { month: 'Jan', completed: 12, pending: 3 },
-    { month: 'Feb', completed: 15, pending: 2 },
-    { month: 'Mar', completed: 10, pending: 5 },
-    { month: 'Apr', completed: 18, pending: 1 },
-    { month: 'May', completed: 14, pending: 4 },
-    { month: 'Jun', completed: 16, pending: 2 },
-  ],
-  equipmentStats: [
-    { name: 'MRI Scanner', value: 35 },
-    { name: 'CT Scanner', value: 25 },
-    { name: 'X-Ray Machine', value: 20 },
-    { name: 'Ultrasound', value: 20 },
-  ],
-  summary: {
-    totalWorkOrders: 150,
-    completedWorkOrders: 120,
-    averageResponseTime: '2.5 days',
-    onTimeCompletion: '85%',
-  },
-};
-
 const MaintenanceReports: React.FC = () => {
+  const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<string>('6months');
+  const [reports, setReports] = useState<MaintenanceReport[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchReports();
+  }, [timeRange]);
+
+  const fetchReports = async () => {
+    try {
+      setIsLoading(true);
+      const data = await maintenanceApi.getAll({
+        timeRange,
+      });
+      setReports(data);
+    } catch (error) {
+      toast.error('Failed to load maintenance reports');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getMonthlyStats = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const stats = months.map(month => ({
+      month,
+      completed: 0,
+      pending: 0,
+    }));
+
+    reports.forEach(report => {
+      const date = new Date(report.createdAt);
+      const monthIndex = date.getMonth();
+      if (report.status === 'Completed') {
+        stats[monthIndex].completed++;
+      } else {
+        stats[monthIndex].pending++;
+      }
+    });
+
+    return stats;
+  };
+
+  const getEquipmentStats = () => {
+    const equipmentMap = new Map<string, number>();
+    
+    reports.forEach(report => {
+      const count = equipmentMap.get(report.equipment.name) || 0;
+      equipmentMap.set(report.equipment.name, count + 1);
+    });
+
+    return Array.from(equipmentMap.entries()).map(([name, value]) => ({ name, value }));
+  };
+
+  const getSummary = () => {
+    const totalWorkOrders = reports.length;
+    const completedWorkOrders = reports.filter(r => r.status === 'Completed').length;
+    const averageResponseTime = calculateAverageResponseTime();
+    const onTimeCompletion = calculateOnTimeCompletion();
+
+    return {
+      totalWorkOrders,
+      completedWorkOrders,
+      averageResponseTime,
+      onTimeCompletion,
+    };
+  };
+
+  const calculateAverageResponseTime = () => {
+    const completedReports = reports.filter(r => r.status === 'Completed');
+    if (completedReports.length === 0) return '0 days';
+
+    const totalDays = completedReports.reduce((sum, report) => {
+      const startDate = new Date(report.createdAt);
+      const endDate = new Date(report.updatedAt);
+      const days = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+      return sum + days;
+    }, 0);
+
+    const averageDays = totalDays / completedReports.length;
+    return `${averageDays.toFixed(1)} days`;
+  };
+
+  const calculateOnTimeCompletion = () => {
+    const completedReports = reports.filter(r => r.status === 'Completed');
+    if (completedReports.length === 0) return '0%';
+
+    const onTimeReports = completedReports.filter(report => {
+      if (!report.nextDueDate) return true;
+      const completionDate = new Date(report.updatedAt);
+      const dueDate = new Date(report.nextDueDate);
+      return completionDate <= dueDate;
+    });
+
+    const percentage = (onTimeReports.length / completedReports.length) * 100;
+    return `${percentage.toFixed(0)}%`;
+  };
+
+  const handleExport = async () => {
+    try {
+      const blob = await maintenanceApi.exportReports({ timeRange });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `maintenance-reports-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast.error('Failed to export reports');
+    }
+  };
+
+  const summary = getSummary();
 
   return (
     <div className="space-y-6">
@@ -66,7 +162,7 @@ const MaintenanceReports: React.FC = () => {
               <SelectItem value="1year">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button>Export Report</Button>
+          <Button onClick={handleExport}>Export Report</Button>
         </div>
       </div>
 
@@ -76,7 +172,7 @@ const MaintenanceReports: React.FC = () => {
             <CardTitle className="text-sm font-medium">Total Work Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockData.summary.totalWorkOrders}</div>
+            <div className="text-2xl font-bold">{summary.totalWorkOrders}</div>
           </CardContent>
         </Card>
         <Card>
@@ -84,7 +180,7 @@ const MaintenanceReports: React.FC = () => {
             <CardTitle className="text-sm font-medium">Completed Work Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockData.summary.completedWorkOrders}</div>
+            <div className="text-2xl font-bold">{summary.completedWorkOrders}</div>
           </CardContent>
         </Card>
         <Card>
@@ -92,7 +188,7 @@ const MaintenanceReports: React.FC = () => {
             <CardTitle className="text-sm font-medium">Average Response Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockData.summary.averageResponseTime}</div>
+            <div className="text-2xl font-bold">{summary.averageResponseTime}</div>
           </CardContent>
         </Card>
         <Card>
@@ -100,7 +196,7 @@ const MaintenanceReports: React.FC = () => {
             <CardTitle className="text-sm font-medium">On-Time Completion</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockData.summary.onTimeCompletion}</div>
+            <div className="text-2xl font-bold">{summary.onTimeCompletion}</div>
           </CardContent>
         </Card>
       </div>
@@ -113,7 +209,7 @@ const MaintenanceReports: React.FC = () => {
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={mockData.monthlyStats}>
+                <BarChart data={getMonthlyStats()}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -136,7 +232,7 @@ const MaintenanceReports: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={mockData.equipmentStats}
+                    data={getEquipmentStats()}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -145,7 +241,7 @@ const MaintenanceReports: React.FC = () => {
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
-                    {mockData.equipmentStats.map((entry, index) => (
+                    {getEquipmentStats().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

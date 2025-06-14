@@ -13,22 +13,23 @@ import {
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'react-hot-toast';
 import { equipmentApi } from '../services/api';
-import { Equipment } from '../types/equipment';
-import BiomedicalSidebar from '../components/BiomedicalSidebar';
-import SharedLayout from '../components/SharedLayout';
 import { useAuth } from '../contexts/AuthContext';
 
 interface FormData {
-  name: string;
-  type: string;
-  location: string;
-  manufacturer: string;
-  model: string;
   serialNumber: string;
-  purchaseDate: string;
-  warrantyExpiry: string;
-  description: string;
+  manufacturerName: string;
+  modelNumber: string;
+  manufacturerServiceNumber: string;
+  vendorName: string;
+  vendorCode: string;
+  locationDescription: string;
+  locationCode: string;
+  purchasePrice: string;
+  installationDate: string;
+  warrantyExpirationDate: string;
   status: string;
+  category: string;
+  department: string;
 }
 
 const AddEquipment: React.FC = () => {
@@ -36,16 +37,20 @@ const AddEquipment: React.FC = () => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    type: '',
-    location: '',
-    manufacturer: '',
-    model: '',
     serialNumber: '',
-    purchaseDate: '',
-    warrantyExpiry: '',
-    description: '',
-    status: '',
+    manufacturerName: '',
+    modelNumber: '',
+    manufacturerServiceNumber: '',
+    vendorName: '',
+    vendorCode: '',
+    locationDescription: '',
+    locationCode: '',
+    purchasePrice: '',
+    installationDate: '',
+    warrantyExpirationDate: '',
+    status: 'Operational',
+    category: '',
+    department: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -64,7 +69,9 @@ const AddEquipment: React.FC = () => {
     try {
       const requestData = {
         ...formData,
-        role: user?.role
+        purchasePrice: parseFloat(formData.purchasePrice) || 0,
+        installationDate: new Date(formData.installationDate).toISOString(),
+        warrantyExpirationDate: new Date(formData.warrantyExpirationDate).toISOString(),
       };
       await equipmentApi.create(requestData);
       toast.success('Equipment added successfully');
@@ -78,146 +85,197 @@ const AddEquipment: React.FC = () => {
   };
 
   return (
-    <SharedLayout title="Add Equipment" sidebar={<BiomedicalSidebar />}>
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Add New Equipment</h1>
-            <Button variant="outline" onClick={() => navigate('/biomedical/equipment')}>
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Add New Equipment</h1>
+          <Button variant="outline" onClick={() => navigate('/biomedical/equipment')}>
+            Cancel
+          </Button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="serialNumber">Serial Number</Label>
+              <Input
+                id="serialNumber"
+                name="serialNumber"
+                value={formData.serialNumber}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="manufacturerName">Manufacturer Name</Label>
+              <Input
+                id="manufacturerName"
+                name="manufacturerName"
+                value={formData.manufacturerName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="modelNumber">Model Number</Label>
+              <Input
+                id="modelNumber"
+                name="modelNumber"
+                value={formData.modelNumber}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="manufacturerServiceNumber">Manufacturer Service Number</Label>
+              <Input
+                id="manufacturerServiceNumber"
+                name="manufacturerServiceNumber"
+                value={formData.manufacturerServiceNumber}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="vendorName">Vendor Name</Label>
+              <Input
+                id="vendorName"
+                name="vendorName"
+                value={formData.vendorName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="vendorCode">Vendor Code</Label>
+              <Input
+                id="vendorCode"
+                name="vendorCode"
+                value={formData.vendorCode}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="locationDescription">Location Description</Label>
+              <Input
+                id="locationDescription"
+                name="locationDescription"
+                value={formData.locationDescription}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="locationCode">Location Code</Label>
+              <Input
+                id="locationCode"
+                name="locationCode"
+                value={formData.locationCode}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="purchasePrice">Purchase Price</Label>
+              <Input
+                id="purchasePrice"
+                name="purchasePrice"
+                type="number"
+                step="0.01"
+                value={formData.purchasePrice}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="installationDate">Installation Date</Label>
+              <Input
+                id="installationDate"
+                name="installationDate"
+                type="date"
+                value={formData.installationDate}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="warrantyExpirationDate">Warranty Expiration Date</Label>
+              <Input
+                id="warrantyExpirationDate"
+                name="warrantyExpirationDate"
+                type="date"
+                value={formData.warrantyExpirationDate}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => handleSelectChange('status', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Operational">Operational</SelectItem>
+                  <SelectItem value="Needs Maintenance">Needs Maintenance</SelectItem>
+                  <SelectItem value="Out of Service">Out of Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="department">Department</Label>
+              <Input
+                id="department"
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/biomedical/equipment')}
+            >
               Cancel
             </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Adding...' : 'Add Equipment'}
+            </Button>
           </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Basic Information */}
-              <div>
-                <Label htmlFor="name">Equipment Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="type">Type</Label>
-                <Input
-                  id="type"
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="manufacturer">Manufacturer</Label>
-                <Input
-                  id="manufacturer"
-                  name="manufacturer"
-                  value={formData.manufacturer}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="model">Model</Label>
-                <Input
-                  id="model"
-                  name="model"
-                  value={formData.model}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="serialNumber">Serial Number</Label>
-                <Input
-                  id="serialNumber"
-                  name="serialNumber"
-                  value={formData.serialNumber}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="purchaseDate">Purchase Date</Label>
-                <Input
-                  id="purchaseDate"
-                  name="purchaseDate"
-                  type="date"
-                  value={formData.purchaseDate}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="warrantyExpiry">Warranty Expiry</Label>
-                <Input
-                  id="warrantyExpiry"
-                  name="warrantyExpiry"
-                  type="date"
-                  value={formData.warrantyExpiry}
-                  onChange={handleChange}
-                />
-              </div>
-
-              {/* Description and Status */}
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  rows={4}
-                  value={formData.description}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleSelectChange('status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Operational">Operational</SelectItem>
-                    <SelectItem value="Needs Maintenance">Needs Maintenance</SelectItem>
-                    <SelectItem value="Out of Service">Out of Service</SelectItem>
-                    <SelectItem value="Decommissioned">Decommissioned</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Adding...' : 'Add Equipment'}
-              </Button>
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
-    </SharedLayout>
+    </div>
   );
 };
 

@@ -25,7 +25,7 @@ interface RecentActivity {
   id: string;
   type: 'user' | 'equipment' | 'repair' | 'alert';
   action: string;
-  details: string;
+  details?: string;
   time: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: string;
@@ -56,8 +56,8 @@ const AdminDashboard: React.FC = () => {
         setStats({
           totalUsers: users.length,
           totalEquipment: equipment.length,
-          activeWorkOrders: workOrders.filter(wo => wo.status === 'in_progress').length,
-          pendingMaintenance: workOrders.filter(wo => wo.status === 'pending').length,
+          activeWorkOrders: workOrders.filter(wo => wo.status === 'In Progress').length,
+          pendingMaintenance: workOrders.filter(wo => wo.status === 'Reported').length,
         });
 
         const activities: RecentActivity[] = [
@@ -72,12 +72,12 @@ const AdminDashboard: React.FC = () => {
           })),
           ...workOrders.slice(0, 2).map(wo => ({
             id: wo.id,
-            type: wo.status === 'completed' ? 'repair' as const : 'equipment' as const,
-            action: wo.status === 'completed' ? 'Repair request completed' : 'Equipment maintenance required',
+            type: wo.status === 'Completed' ? 'repair' as const : 'equipment' as const,
+            action: wo.status === 'Completed' ? 'Repair request completed' : 'Equipment maintenance required',
             details: wo.issue,
             time: 'Recently',
-            icon: wo.status === 'completed' ? CheckCircleIcon : WrenchIcon,
-            color: wo.status === 'completed' ? 'text-green-500' : 'text-yellow-500',
+            icon: wo.status === 'Completed' ? CheckCircleIcon : WrenchIcon,
+            color: wo.status === 'Completed' ? 'text-green-500' : 'text-yellow-500',
           })),
         ];
 

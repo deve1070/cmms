@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { workOrdersApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getUserDisplayName } from '../types/auth';
 import {
   RefreshCw,
   AlertTriangle,
@@ -11,8 +13,26 @@ import {
 } from 'lucide-react';
 import BiomedicalLayout from '../components/BiomedicalLayout';
 import { WorkOrder } from '../types/workOrder';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
 
 const BiomedicalWorkOrders: React.FC = () => {
+  const { user } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +41,7 @@ const BiomedicalWorkOrders: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [sortField, setSortField] = useState<keyof WorkOrder>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchWorkOrders();
@@ -41,10 +62,10 @@ const BiomedicalWorkOrders: React.FC = () => {
   const filteredWorkOrders = workOrders.filter(order => {
     const searchString = searchTerm.toLowerCase();
     const matchesSearch =
-      (order.title?.toLowerCase() || '').includes(searchString) ||
+      (order.issue?.toLowerCase() || '').includes(searchString) ||
       (order.description?.toLowerCase() || '').includes(searchString) ||
-      (order.equipmentName?.toLowerCase() || '').includes(searchString) ||
-      (order.assignedTo?.toLowerCase() || '').includes(searchString);
+      (order.equipment.name?.toLowerCase() || '').includes(searchString) ||
+      (order.assignedTo?.username?.toLowerCase() || '').includes(searchString);
 
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
     const matchesPriority = filterPriority === 'all' || order.priority === filterPriority;
@@ -64,7 +85,7 @@ const BiomedicalWorkOrders: React.FC = () => {
       } else if (valB === null || valB === undefined) {
         comparison = -1;
       } else if (typeof valA === 'string' && typeof valB === 'string') {
-        if (sortField === 'dueDate') {
+        if (sortField === 'createdAt') {
           comparison = new Date(valA).getTime() - new Date(valB).getTime();
         } else {
           comparison = valA.localeCompare(valB);
@@ -100,7 +121,10 @@ const BiomedicalWorkOrders: React.FC = () => {
   const uniqueTypes = ['all', 'preventive', 'corrective', 'inspection', 'calibration', 'repair'];
 
   return (
-    <BiomedicalLayout>
+    <BiomedicalLayout
+      title="Work Orders"
+      userDisplayName={getUserDisplayName(user, 'Biomedical Engineer')}
+    >
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
@@ -184,8 +208,13 @@ const BiomedicalWorkOrders: React.FC = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button onClick={() => handleSort('title')} className="flex items-center hover:text-blue-600">
-                        Title <SortIndicator fieldName="title" />
+                      <button onClick={() => handleSort('issue')} className="flex items-center hover:text-blue-600">
+                        Issue <SortIndicator fieldName="issue" />
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <button onClick={() => handleSort('equipment')} className="flex items-center hover:text-blue-600">
+                        Equipment <SortIndicator fieldName="equipment" />
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -199,13 +228,8 @@ const BiomedicalWorkOrders: React.FC = () => {
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button onClick={() => handleSort('type')} className="flex items-center hover:text-blue-600">
-                        Type <SortIndicator fieldName="type" />
-                      </button>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button onClick={() => handleSort('equipmentName')} className="flex items-center hover:text-blue-600">
-                        Equipment <SortIndicator fieldName="equipmentName" />
+                      <button onClick={() => handleSort('createdAt')} className="flex items-center hover:text-blue-600">
+                        Created Date <SortIndicator fieldName="createdAt" />
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -213,41 +237,35 @@ const BiomedicalWorkOrders: React.FC = () => {
                         Assigned To <SortIndicator fieldName="assignedTo" />
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button onClick={() => handleSort('dueDate')} className="flex items-center hover:text-blue-600">
-                        Due Date <SortIndicator fieldName="dueDate" />
-                      </button>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sortedWorkOrders.map((order) => (
                     <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.title}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.issue}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.equipment.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          order.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
+                          order.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                          order.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
                         }`}>
                           {order.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          order.priority === 'high' ? 'bg-red-100 text-red-800' :
-                          order.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          order.priority === 'High' ? 'bg-red-100 text-red-800' :
+                          order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-green-100 text-green-800'
                         }`}>
                           {order.priority}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.equipmentName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.assignedTo}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.dueDate ? new Date(order.dueDate).toLocaleDateString() : 'Not set'}
+                        {new Date(order.createdAt).toLocaleDateString()}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.assignedTo?.username}</td>
                     </tr>
                   ))}
                 </tbody>

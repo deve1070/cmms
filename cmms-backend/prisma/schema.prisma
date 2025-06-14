@@ -31,6 +31,7 @@ model Equipment {
   contracts               Contract[]
   compliance              Compliance[]
   spareParts              SparePart[]
+  maintenanceReports      MaintenanceReport[]
 }
 
 model SparePart {
@@ -58,9 +59,11 @@ model WorkOrder {
   type                String   // "Preventive", "Corrective", "Calibration", "Inspection"
   priority            String   @default("Medium") // "Low", "Medium", "High", "Critical"
   status              String   @default("Reported") // "Reported", "Assigned", "In Progress", "On Hold", "Completed", "Cancelled"
-  reportedBy          String
+  reportedById        String
+  reportedBy          User     @relation("ReportedWorkOrders", fields: [reportedById], references: [id])
   reportedAt          DateTime
-  assignedTo          String?
+  assignedToId        String?
+  assignedTo          User?    @relation("AssignedWorkOrders", fields: [assignedToId], references: [id])
   assignedAt          DateTime?
   estimatedCompletion DateTime?
   description         String
@@ -133,14 +136,36 @@ model Compliance {
 }
 
 model User {
+  id                    String   @id @default(uuid())
+  username              String   @unique
+  email                 String   @unique
+  role                  String   // "Admin", "Technician", "Engineer", "LabTechnician"
+  password              String
+  department            String?
+  permissions           String   // JSON string of specific permissions
+  lastLogin             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  reportedWorkOrders    WorkOrder[] @relation("ReportedWorkOrders")
+  assignedWorkOrders    WorkOrder[] @relation("AssignedWorkOrders")
+  maintenanceReports    MaintenanceReport[]
+}
+
+model MaintenanceReport {
   id            String   @id @default(uuid())
-  username      String   @unique
-  email         String   @unique
-  role          String   // "Admin", "Technician", "Engineer", "LabTechnician"
-  password      String
-  department    String?
-  permissions   String   // JSON string of specific permissions
-  lastLogin     String?
+  equipmentId   String
+  equipment     Equipment @relation(fields: [equipmentId], references: [id])
+  type          String   // "Preventive", "Corrective", "Calibration", "Inspection"
+  description   String
+  performedById String
+  performedBy   User     @relation(fields: [performedById], references: [id])
+  date          DateTime
+  cost          Float?
+  partsUsed     String?
+  status        String   @default("Completed") // "Scheduled", "In Progress", "Completed", "Cancelled"
+  findings      String?
+  recommendations String?
+  nextDueDate   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

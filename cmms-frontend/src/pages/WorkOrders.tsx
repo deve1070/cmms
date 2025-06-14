@@ -82,13 +82,13 @@ const WorkOrders: React.FC = () => {
           order.id === workOrderId 
             ? {
                 ...order,
-                partsUsed: [
-                  ...(order.partsUsed || []),
+                partsUsed: JSON.stringify([
+                  ...JSON.parse(order.partsUsed || '[]'),
                   {
                     partId: selectedPart,
                     quantity: partQuantity
                   }
-                ]
+                ])
               }
             : order
         )
@@ -108,17 +108,17 @@ const WorkOrders: React.FC = () => {
     const searchString = searchTerm.toLowerCase();
     const matchesSearch =
       (item.description?.toLowerCase() || '').includes(searchString) ||
-      (item.assignedTo?.toLowerCase() || '').includes(searchString) ||
-      (item.reportedBy?.toLowerCase() || '').includes(searchString) ||
+      (item.assignedTo?.username?.toLowerCase() || '').includes(searchString) ||
+      (item.reportedBy?.username?.toLowerCase() || '').includes(searchString) ||
       (item.equipmentId?.toLowerCase() || '').includes(searchString) ||
       (item.type?.toLowerCase() || '').includes(searchString);
 
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    const matchesType = typeFilter === 'all' || item.type?.toLowerCase() === typeFilter.toLowerCase();
+    const matchesType = typeFilter === 'all' || item.type === typeFilter;
 
     let matchesUnassigned = true;
     if (showUnassignedOnly) {
-      matchesUnassigned = !item.assignedTo || item.assignedTo.toLowerCase() === 'unassigned' || item.assignedTo.trim() === '';
+      matchesUnassigned = !item.assignedTo || item.assignedTo.username === 'unassigned' || item.assignedTo.username === '';
     }
 
     return matchesSearch && matchesStatus && matchesType && matchesUnassigned;
@@ -152,13 +152,13 @@ const WorkOrders: React.FC = () => {
 
   const getStatusColor = (status: WorkOrder['status']) => {
     switch (status) {
-      case 'completed':
+      case 'Completed':
         return 'bg-green-100 text-green-800';
-      case 'in_progress':
+      case 'In Progress':
         return 'bg-blue-100 text-blue-800';
-      case 'pending':
+      case 'Reported':
         return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
+      case 'Cancelled':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -190,7 +190,7 @@ const WorkOrders: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Work Orders</h1>
         <Button onClick={() => navigate('/biomedical/work-orders/new')}>
@@ -239,41 +239,35 @@ const WorkOrders: React.FC = () => {
               <TableHead>Status</TableHead>
               <TableHead>Assigned To</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead>Due Date</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedAndFilteredWorkOrders.map((workOrder) => (
+            {filteredWorkOrders.map((workOrder) => (
               <TableRow key={workOrder.id}>
                 <TableCell>{workOrder.id}</TableCell>
-                <TableCell>{workOrder.equipmentName}</TableCell>
+                <TableCell>{workOrder.equipment.name}</TableCell>
                 <TableCell className="capitalize">{workOrder.type}</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs ${
-                    workOrder.priority === 'high'
-                      ? 'bg-red-100 text-red-800'
-                      : workOrder.priority === 'medium'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-green-100 text-green-800'
+                    workOrder.priority === 'High' ? 'bg-red-100 text-red-800' :
+                    workOrder.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
                   }`}>
                     {workOrder.priority}
                   </span>
                 </TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs ${
-                    workOrder.status === 'completed'
-                      ? 'bg-green-100 text-green-800'
-                      : workOrder.status === 'in_progress'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-yellow-100 text-yellow-800'
+                    workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                    workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                    'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {workOrder.status.replace('_', ' ')}
+                    {workOrder.status}
                   </span>
                 </TableCell>
-                <TableCell>{workOrder.assignedTo}</TableCell>
-                <TableCell>{workOrder.createdAt ? new Date(workOrder.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
-                <TableCell>{workOrder.dueDate ? new Date(workOrder.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
+                <TableCell>{workOrder.assignedTo?.username || 'Unassigned'}</TableCell>
+                <TableCell>{new Date(workOrder.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <Button
                     variant="outline"

@@ -54,10 +54,10 @@ wss.on('connection', (ws: WebSocket) => {
 
 // Configure CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
+  origin: ['http://localhost:3004', 'http://localhost:3000', 'http://localhost:3003'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Request logging middleware
@@ -284,6 +284,264 @@ app.get('/api/protected', authenticateToken, (req: AuthRequest, res) => {
       role: req.user.role
     }
   });
+});
+
+// Equipment routes
+app.get('/api/equipment', async (req, res) => {
+  try {
+    const equipment = await prisma.equipment.findMany({
+      include: {
+        maintenanceHistory: true,
+        workOrders: true,
+        maintenanceReports: true,
+      },
+    });
+    res.json(equipment);
+  } catch (error) {
+    console.error('Error fetching equipment:', error);
+    res.status(500).json({ error: 'Failed to fetch equipment' });
+  }
+});
+
+app.get('/api/equipment/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const equipment = await prisma.equipment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        maintenanceHistory: true,
+        workOrders: true
+      }
+    });
+    if (!equipment) {
+      return res.status(404).json({ error: 'Equipment not found' });
+    }
+    res.json(equipment);
+  } catch (error) {
+    console.error('Error fetching equipment:', error);
+    res.status(500).json({ error: 'Failed to fetch equipment' });
+  }
+});
+
+app.post('/api/equipment', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const equipment = await prisma.equipment.create({
+      data: req.body
+    });
+    res.json(equipment);
+  } catch (error) {
+    console.error('Error creating equipment:', error);
+    res.status(500).json({ error: 'Failed to create equipment' });
+  }
+});
+
+app.put('/api/equipment/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const equipment = await prisma.equipment.update({
+      where: { id: req.params.id },
+      data: req.body
+    });
+    res.json(equipment);
+  } catch (error) {
+    console.error('Error updating equipment:', error);
+    res.status(500).json({ error: 'Failed to update equipment' });
+  }
+});
+
+app.delete('/api/equipment/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    await prisma.equipment.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ message: 'Equipment deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting equipment:', error);
+    res.status(500).json({ error: 'Failed to delete equipment' });
+  }
+});
+
+// Work orders routes
+app.get('/api/work-orders', async (req, res) => {
+  try {
+    const workOrders = await prisma.workOrder.findMany({
+      include: {
+        equipment: true,
+        assignedTo: true,
+        reportedBy: true,
+      },
+    });
+    res.json(workOrders);
+  } catch (error) {
+    console.error('Error fetching work orders:', error);
+    res.status(500).json({ error: 'Failed to fetch work orders' });
+  }
+});
+
+app.get('/api/work-orders/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const workOrder = await prisma.workOrder.findUnique({
+      where: { id: req.params.id },
+      include: {
+        equipment: true,
+        assignedTo: true,
+        reportedBy: true
+      }
+    });
+    if (!workOrder) {
+      return res.status(404).json({ error: 'Work order not found' });
+    }
+    res.json(workOrder);
+  } catch (error) {
+    console.error('Error fetching work order:', error);
+    res.status(500).json({ error: 'Failed to fetch work order' });
+  }
+});
+
+app.post('/api/work-orders', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const workOrder = await prisma.workOrder.create({
+      data: {
+        ...req.body,
+        reportedBy: { connect: { id: req.user?.id } }
+      },
+      include: {
+        equipment: true,
+        assignedTo: true,
+        reportedBy: true
+      }
+    });
+    res.json(workOrder);
+  } catch (error) {
+    console.error('Error creating work order:', error);
+    res.status(500).json({ error: 'Failed to create work order' });
+  }
+});
+
+app.put('/api/work-orders/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const workOrder = await prisma.workOrder.update({
+      where: { id: req.params.id },
+      data: req.body,
+      include: {
+        equipment: true,
+        assignedTo: true,
+        reportedBy: true
+      }
+    });
+    res.json(workOrder);
+  } catch (error) {
+    console.error('Error updating work order:', error);
+    res.status(500).json({ error: 'Failed to update work order' });
+  }
+});
+
+app.delete('/api/work-orders/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    await prisma.workOrder.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ message: 'Work order deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting work order:', error);
+    res.status(500).json({ error: 'Failed to delete work order' });
+  }
+});
+
+// Maintenance routes
+app.get('/api/maintenance', async (req, res) => {
+  try {
+    const maintenanceReports = await prisma.maintenanceReport.findMany({
+      include: {
+        equipment: true,
+        performedBy: true,
+      },
+    });
+    res.json(maintenanceReports);
+  } catch (error) {
+    console.error('Error fetching maintenance reports:', error);
+    res.status(500).json({ error: 'Failed to fetch maintenance reports' });
+  }
+});
+
+app.get('/api/maintenance/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const maintenance = await prisma.maintenanceReport.findUnique({
+      where: { id: req.params.id },
+      include: {
+        equipment: true,
+        performedBy: true
+      }
+    });
+    if (!maintenance) {
+      return res.status(404).json({ error: 'Maintenance report not found' });
+    }
+    res.json(maintenance);
+  } catch (error) {
+    console.error('Error fetching maintenance report:', error);
+    res.status(500).json({ error: 'Failed to fetch maintenance report' });
+  }
+});
+
+app.post('/api/maintenance', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const maintenance = await prisma.maintenanceReport.create({
+      data: {
+        ...req.body,
+        performedBy: { connect: { id: req.user?.id } }
+      },
+      include: {
+        equipment: true,
+        performedBy: true
+      }
+    });
+    res.json(maintenance);
+  } catch (error) {
+    console.error('Error creating maintenance report:', error);
+    res.status(500).json({ error: 'Failed to create maintenance report' });
+  }
+});
+
+app.put('/api/maintenance/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const maintenance = await prisma.maintenanceReport.update({
+      where: { id: req.params.id },
+      data: req.body,
+      include: {
+        equipment: true,
+        performedBy: true
+      }
+    });
+    res.json(maintenance);
+  } catch (error) {
+    console.error('Error updating maintenance report:', error);
+    res.status(500).json({ error: 'Failed to update maintenance report' });
+  }
+});
+
+app.delete('/api/maintenance/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    await prisma.maintenanceReport.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ message: 'Maintenance report deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting maintenance report:', error);
+    res.status(500).json({ error: 'Failed to delete maintenance report' });
+  }
+});
+
+// Spare parts routes
+app.get('/api/spare-parts', async (req, res) => {
+  try {
+    const spareParts = await prisma.sparePart.findMany({
+      include: {
+        equipment: true,
+      },
+    });
+    res.json(spareParts);
+  } catch (error) {
+    console.error('Error fetching spare parts:', error);
+    res.status(500).json({ error: 'Failed to fetch spare parts' });
+  }
 });
 
 // Error handling middleware

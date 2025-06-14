@@ -138,13 +138,13 @@ const LabTechDashboard: React.FC = () => {
                 },
                 {
                   label: 'Active Work Orders',
-                  value: workOrders.filter((wo) => wo.status !== 'completed' && wo.status !== 'cancelled').length,
+                  value: workOrders.filter((wo) => wo.status !== 'Completed' && wo.status !== 'Cancelled').length,
                   icon: Wrench,
                   color: 'text-blue-600',
                 },
                 {
                   label: 'Pending Reports',
-                  value: maintenanceReports.filter((report) => report.status === 'pending').length,
+                  value: maintenanceReports.filter((report) => report.status === 'Scheduled').length,
                   icon: FileText,
                   color: 'text-yellow-600',
                 },
@@ -152,9 +152,9 @@ const LabTechDashboard: React.FC = () => {
                   label: 'My Open Issues',
                   value: workOrders.filter(
                     (wo) =>
-                      wo.reportedBy === user?.username &&
-                      wo.status !== 'completed' &&
-                      wo.status !== 'cancelled',
+                      wo.reportedBy.username === user?.username &&
+                      wo.status !== 'Completed' &&
+                      wo.status !== 'Cancelled',
                   ).length,
                   icon: AlertTriangle,
                   color: 'text-purple-600',
@@ -260,13 +260,13 @@ const LabTechDashboard: React.FC = () => {
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <h3 className="font-medium text-gray-800">{report.equipmentName}</h3>
+                        <h3 className="font-medium text-gray-800">{report.equipment.name}</h3>
                         <p className="text-sm text-gray-500">{report.description}</p>
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${report.status === 'completed'
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${report.status === 'Completed'
                             ? 'bg-green-100 text-green-700'
-                            : report.status === 'in_progress'
+                            : report.status === 'In Progress'
                               ? 'bg-yellow-100 text-yellow-700'
                               : 'bg-blue-100 text-blue-700'
                           }`}

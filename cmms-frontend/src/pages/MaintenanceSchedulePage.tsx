@@ -13,7 +13,8 @@ const MaintenanceScheduleView: React.FC = () => {
   const navigate = useNavigate();
   const [schedules, setSchedules] = useState<MaintenanceSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
+  const [filter, setFilter] = useState<'all' | 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -22,15 +23,17 @@ const MaintenanceScheduleView: React.FC = () => {
         const response = await maintenanceApi.getAll({});
         // Convert MaintenanceReport[] to MaintenanceSchedule[] and filter out emergency reports
         const scheduleData = response
-          .filter(report => report.type === 'preventive' || report.type === 'corrective')
+          .filter(report => report.type === 'Preventive' || report.type === 'Corrective')
           .map(report => ({
             id: report.id,
             equipmentId: report.equipmentId,
-            type: report.type as 'preventive' | 'corrective',
+            type: report.type,
             status: report.status,
-            scheduledDate: report.date,
+            scheduledDate: report.nextDueDate || report.createdAt,
             description: report.description,
-            equipment: report.equipment
+            equipment: report.equipment,
+            createdAt: report.createdAt,
+            updatedAt: report.updatedAt
           }));
         setSchedules(scheduleData);
       } catch (error) {
@@ -44,8 +47,13 @@ const MaintenanceScheduleView: React.FC = () => {
   }, []);
 
   const filteredSchedules = schedules.filter(schedule => {
-    if (filter === 'all') return true;
-    return schedule.status === filter;
+    const matchesSearch = searchTerm === '' ||
+      schedule.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.equipment.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = filter === 'all' || schedule.status === filter;
+
+    return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
