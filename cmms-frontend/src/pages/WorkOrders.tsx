@@ -2,20 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { workOrdersApi, sparePartsApi } from '../services/api';
 import {
-  ArrowPathIcon,
-  PlusIcon,
-  MagnifyingGlassIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ExclamationTriangleIcon,
-  ChevronUpDownIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  WrenchScrewdriverIcon,
-} from '@heroicons/react/24/outline';
+  Plus,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { WorkOrder } from '../types/workOrder';
 import { SparePart } from '../types/sparePart';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 
 const WorkOrders: React.FC = () => {
   const navigate = useNavigate();
@@ -23,9 +37,8 @@ const WorkOrders: React.FC = () => {
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all');
-  const [filterType, setFilterType] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const [sortField, setSortField] = useState<keyof WorkOrder | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -73,8 +86,7 @@ const WorkOrders: React.FC = () => {
                   ...(order.partsUsed || []),
                   {
                     partId: selectedPart,
-                    quantity: partQuantity,
-                    partName: spareParts.find(p => p.id === selectedPart)?.name
+                    quantity: partQuantity
                   }
                 ]
               }
@@ -95,23 +107,21 @@ const WorkOrders: React.FC = () => {
   const filteredWorkOrders = workOrders.filter(item => {
     const searchString = searchTerm.toLowerCase();
     const matchesSearch =
-      (item.issue?.toLowerCase() || '').includes(searchString) ||
+      (item.description?.toLowerCase() || '').includes(searchString) ||
       (item.assignedTo?.toLowerCase() || '').includes(searchString) ||
       (item.reportedBy?.toLowerCase() || '').includes(searchString) ||
       (item.equipmentId?.toLowerCase() || '').includes(searchString) ||
-      (item.type?.toLowerCase() || '').includes(searchString) ||
-      (item.priority?.toLowerCase() || '').includes(searchString);
+      (item.type?.toLowerCase() || '').includes(searchString);
 
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
-    const matchesPriority = filterPriority === 'all' || item.priority?.toLowerCase() === filterPriority.toLowerCase();
-    const matchesType = filterType === 'all' || item.type?.toLowerCase() === filterType.toLowerCase();
+    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+    const matchesType = typeFilter === 'all' || item.type?.toLowerCase() === typeFilter.toLowerCase();
 
     let matchesUnassigned = true;
     if (showUnassignedOnly) {
       matchesUnassigned = !item.assignedTo || item.assignedTo.toLowerCase() === 'unassigned' || item.assignedTo.trim() === '';
     }
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesType && matchesUnassigned;
+    return matchesSearch && matchesStatus && matchesType && matchesUnassigned;
   });
 
   const sortedAndFilteredWorkOrders = React.useMemo(() => {
@@ -133,11 +143,11 @@ const WorkOrders: React.FC = () => {
 
   const SortIndicator = ({ fieldName }: { fieldName: keyof WorkOrder }) => {
     if (sortField !== fieldName) {
-      return <ChevronUpDownIcon className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
+      return <ChevronsUpDown className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
     }
     return sortDirection === 'asc' ?
-      <ChevronUpIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
-      <ChevronDownIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+      <ChevronUp className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
+      <ChevronDown className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
   };
 
   const getStatusColor = (status: WorkOrder['status']) => {
@@ -166,13 +176,13 @@ const WorkOrders: React.FC = () => {
       } else if (valB === null || valB === undefined) {
         comparison = -1;
       } else if (typeof valA === 'string' && typeof valB === 'string') {
-        comparison = valA.localeCompare(valB);
+        if (sortKey === 'updatedAt' || sortKey === 'createdAt') {
+          comparison = new Date(valA).getTime() - new Date(valB).getTime();
+        } else {
+          comparison = valA.localeCompare(valB);
+        }
       } else if (typeof valA === 'number' && typeof valB === 'number') {
         comparison = valA - valB;
-      } else if (valA && valB && typeof valA === 'object' && typeof valB === 'object' && 'getTime' in valA && 'getTime' in valB) {
-        comparison = (valA as Date).getTime() - (valB as Date).getTime();
-      } else if (typeof valA === 'string' && Date.parse(valA) && typeof valB === 'string' && Date.parse(valB)) {
-        comparison = new Date(valA).getTime() - new Date(valB).getTime();
       }
 
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -180,166 +190,103 @@ const WorkOrders: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Work Orders</h1>
+        <Button onClick={() => navigate('/biomedical/work-orders/new')}>
+          Create Work Order
+        </Button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        {/* Search and Filters Row 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <div className="lg:col-span-2">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search work orders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          <div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-           <div>
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-        </div>
-        {/* Filters Row 2 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-           <div>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Types</option>
-              <option value="preventive">Preventive</option>
-              <option value="corrective">Corrective</option>
-              <option value="calibration">Calibration</option>
-              <option value="inspection">Inspection</option>
-            </select>
-          </div>
-          <div className="flex items-center space-x-2 pt-2">
-            <input
-              type="checkbox"
-              id="unassignedOnly"
-              checked={showUnassignedOnly}
-              onChange={(e) => setShowUnassignedOnly(e.target.checked)}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="unassignedOnly" className="text-sm text-gray-700">Show only unassigned</label>
-          </div>
-        </div>
+      <div className="flex gap-4">
+        <Input
+          placeholder="Search work orders..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="preventive">Preventive</SelectItem>
+            <SelectItem value="corrective">Corrective</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('issue')} className="flex items-center hover:text-blue-600">Issue <SortIndicator fieldName="issue" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    {/* TODO: Fetch and display equipment model/serial instead of ID. */}
-                    <button onClick={() => handleSort('equipmentId')} className="flex items-center hover:text-blue-600">Equipment ID <SortIndicator fieldName="equipmentId" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('status')} className="flex items-center hover:text-blue-600">Status <SortIndicator fieldName="status" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('priority')} className="flex items-center hover:text-blue-600">Priority <SortIndicator fieldName="priority" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('type')} className="flex items-center hover:text-blue-600">Type <SortIndicator fieldName="type" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('assignedTo')} className="flex items-center hover:text-blue-600">Assigned To <SortIndicator fieldName="assignedTo" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('reportedBy')} className="flex items-center hover:text-blue-600">Reported By <SortIndicator fieldName="reportedBy" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('createdAt')} className="flex items-center hover:text-blue-600">Created <SortIndicator fieldName="createdAt" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    <button onClick={() => handleSort('updatedAt')} className="flex items-center hover:text-blue-600">Updated <SortIndicator fieldName="updatedAt" /></button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedAndFilteredWorkOrders.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => navigate(`/work-orders/${item.id}`)} // Updated navigation
-                    className="hover:bg-gray-50 cursor-pointer"
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Equipment</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Assigned To</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Due Date</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedAndFilteredWorkOrders.map((workOrder) => (
+              <TableRow key={workOrder.id}>
+                <TableCell>{workOrder.id}</TableCell>
+                <TableCell>{workOrder.equipmentName}</TableCell>
+                <TableCell className="capitalize">{workOrder.type}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    workOrder.priority === 'high'
+                      ? 'bg-red-100 text-red-800'
+                      : workOrder.priority === 'medium'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {workOrder.priority}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    workOrder.status === 'completed'
+                      ? 'bg-green-100 text-green-800'
+                      : workOrder.status === 'in_progress'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {workOrder.status.replace('_', ' ')}
+                  </span>
+                </TableCell>
+                <TableCell>{workOrder.assignedTo}</TableCell>
+                <TableCell>{workOrder.createdAt ? new Date(workOrder.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
+                <TableCell>{workOrder.dueDate ? new Date(workOrder.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/biomedical/work-orders/${workOrder.id}`)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.issue}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.equipmentId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}`}>
-                        {item.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.priority || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.type || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.assignedTo || 'Unassigned'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.reportedBy}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.status === 'in_progress' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedWorkOrder(item);
-                          }}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          <WrenchScrewdriverIcon className="h-4 w-4 mr-1" />
-                          Log Part Usage
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    View Details
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Part Usage Modal */}
@@ -395,4 +342,4 @@ const WorkOrders: React.FC = () => {
   );
 };
 
-export default WorkOrders; 
+export default WorkOrders;

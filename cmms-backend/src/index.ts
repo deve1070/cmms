@@ -3,88 +3,315 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import equipmentRoutes from './routes/equipment';
-import sparePartsRoutes from './routes/spareParts';
-import workOrdersRoutes from './routes/workOrders';
-import contractsRoutes from './routes/contracts';
-import reportsRoutes from './routes/reports';
-import budgetsRoutes from './routes/budgets';
-import complianceRoutes from './routes/compliance';
-import maintenanceRoutes from './routes/maintenance';
-import usersRouter from './routes/users';
-import { authenticateToken } from './middleware/auth';
+import { mapToFrontendRole, LoginResponse, BackendUserRole } from './types/auth';
+import { authenticateToken, AuthRequest } from './middleware/auth';
+import { createServer } from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
+import { Role } from './config/permissions';
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3002;
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-app.use(cors());
+// Create HTTP server and WebSocket server
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
+
+// WebSocket connection handler
+wss.on('connection', (ws: WebSocket) => {
+  console.log('New WebSocket client connected');
+  
+  ws.on('message', (message: Buffer) => {
+    try {
+      const data = JSON.parse(message.toString());
+      console.log('Received WebSocket message:', data);
+      
+      // Broadcast to all clients except sender
+      wss.clients.forEach(client => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'notification',
+            data: `New message: ${data.content}`
+          }));
+        }
+      });
+    } catch (error) {
+      console.error('Error processing WebSocket message:', error);
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('WebSocket client disconnected');
+  });
+
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'system',
+    message: 'Connected to WebSocket server'
+  }));
+});
+
+// Configure CORS
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// JSON response middleware
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
+
 app.use(express.json());
 
-// Public routes
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    services: {
+      database: 'connected',
+      websocket: wss.clients.size
+    }
+  });
+});
+
+// Enhanced login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log('Login attempt for username:', username);
+    
+    if (!username || !password) {
+      return res.status(400).json({ 
+        error: 'Username and password are required',
+        code: 'MISSING_CREDENTIALS'
+      });
+    }
 
-    // Find user by username
     const user = await prisma.user.findFirst({
-      where: { username }
+      where: { username },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        password: true,
+        role: true,
+        department: true,
+        permissions: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true
+      }
     });
 
+    console.log('User from database:', user);
+
     if (!user) {
-      console.log('User not found:', username);
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ 
+        error: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS'
+      });
     }
 
-    console.log('User found, verifying password...');
-
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      console.log('Invalid password for user:', username);
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ 
+        error: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS'
+      });
     }
 
-    console.log('Password verified, generating token...');
+    // Update last login time
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        lastLogin: new Date().toISOString()
+      }
+    });
 
-    // Generate JWT token
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ 
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      permissions: JSON.parse(user.permissions)
+    }, JWT_SECRET, { expiresIn: '24h' });
 
-    // Return user data and token
-    const response = {
+    console.log('User role before mapping:', user.role);
+    const mappedRole = mapToFrontendRole(user.role as BackendUserRole);
+    console.log('Mapped role:', mappedRole);
+
+    const response: LoginResponse = {
       token,
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
-        department: user.department,
-        permissions: JSON.parse(user.permissions)
+        role: mappedRole,
+        department: user.department || undefined,
+        permissions: JSON.parse(user.permissions),
+        status: 'active',
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
       }
     };
 
-    console.log('Login successful for user:', username);
+    console.log('Login response:', response);
+
+    // Broadcast login notification via WebSocket
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'user_login',
+          data: {
+            userId: user.id,
+            username: user.username,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      }
+    });
+
     res.json(response);
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Login failed',
+      code: 'LOGIN_FAILED'
+    });
   }
 });
 
-// Mount routes with /api prefix
-app.use('/api/equipment', equipmentRoutes);
-app.use('/api/spare-parts', sparePartsRoutes);
-app.use('/api/work-orders', workOrdersRoutes);
-app.use('/api/contracts', contractsRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/budgets', budgetsRoutes);
-app.use('/api/compliance', complianceRoutes);
-app.use('/api/maintenance', maintenanceRoutes);
-app.use('/api/users', usersRouter);
+// Enhanced auth check endpoint
+app.get('/api/auth/check', authenticateToken, async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'User not authenticated' });
+  }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        department: true,
+        permissions: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: mapToFrontendRole(user.role as BackendUserRole),
+        department: user.department || undefined,
+        permissions: JSON.parse(user.permissions),
+        status: 'active',
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Auth check error:', error);
+    res.status(500).json({ 
+      error: 'Authentication check failed',
+      code: 'AUTH_CHECK_FAILED'
+    });
+  }
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', authenticateToken, async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'User not authenticated' });
+  }
+  try {
+    // Broadcast logout notification via WebSocket
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'user_logout',
+          data: {
+            userId: req.user!.id,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      }
+    });
+
+    res.json({ message: 'Logout successful' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ 
+      error: 'Logout failed',
+      code: 'LOGOUT_FAILED'
+    });
+  }
+});
+
+// Protected example endpoint
+app.get('/api/protected', authenticateToken, (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'User not authenticated' });
+  }
+  res.json({ 
+    message: 'Access granted to protected resource',
+    user: {
+      id: req.user.id,
+      role: req.user.role
+    }
+  });
+});
+
+// Error handling middleware
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    code: 'INTERNAL_ERROR'
+  });
+});
+
+// Start both HTTP and WebSocket servers
+server.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+  console.log(`WebSocket server running on port ${port}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('HTTP server closed');
+    wss.close(() => {
+      console.log('WebSocket server closed');
+      prisma.$disconnect().then(() => {
+        console.log('Database connection closed');
+        process.exit(0);
+      });
+    });
+  });
 });

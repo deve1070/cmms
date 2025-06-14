@@ -4,12 +4,12 @@ import { budgetsApi } from '../services/api';
 import { Budget } from '../types/budget';
 import { toast } from 'react-hot-toast';
 import {
-  CurrencyDollarIcon,
-  ChartBarIcon,
-  PlusIcon,
-  ArrowPathIcon,
-  ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
+  DollarSign,
+  BarChart,
+  Plus,
+  RefreshCw,
+  AlertTriangle,
+} from 'lucide-react';
 
 const Budgets: React.FC = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -62,13 +62,13 @@ const Budgets: React.FC = () => {
             onClick={() => fetchBudgets()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <ArrowPathIcon className="h-5 w-5 mr-2" />
+            <RefreshCw className="h-5 w-5 mr-2" />
             Refresh
           </button>
           <button
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
+            <Plus className="h-5 w-5 mr-2" />
             Add Budget
           </button>
         </div>
@@ -103,7 +103,7 @@ const Budgets: React.FC = () => {
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <CurrencyDollarIcon className="h-6 w-6 text-gray-400 mr-3" />
+                      <DollarSign className="h-6 w-6 text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm font-medium text-blue-600 truncate">
                           {budget.category}
@@ -124,7 +124,7 @@ const Budgets: React.FC = () => {
                       </div>
                       {utilization >= 90 && (
                         <div className="flex items-center text-sm text-red-600">
-                          <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                          <AlertTriangle className="h-4 w-4 mr-1" />
                           Near Limit
                         </div>
                       )}
@@ -162,4 +162,4 @@ const Budgets: React.FC = () => {
   );
 };
 
-export default Budgets; 
+export default Budgets;

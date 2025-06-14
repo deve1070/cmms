@@ -1,21 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { sparePartsApi } from '../services/api';
+import { workOrdersApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
-  CubeIcon,
-  ExclamationTriangleIcon,
-  PlusIcon,
-  MagnifyingGlassIcon,
-  ArrowPathIcon,
-  PencilIcon,
-  XMarkIcon,
-  FunnelIcon, // Already present, for general filter indication
-  ArrowUpIcon, // For sort direction
-  ArrowDownIcon, // For sort direction
-} from '@heroicons/react/24/outline';
+  Plus,
+  Search,
+  RefreshCw,
+  Pencil,
+  X,
+  Filter,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react';
 import type { SparePart } from '../types/sparePart';
-import type { UserRole } from '../types/auth';
+import type { FrontendUserRole } from '../types/auth';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 
 // Extended type for the form data
 interface SparePartFormData extends Omit<SparePart, 'id' | 'lastUpdated'> {
@@ -36,7 +52,7 @@ const initialNewPartData: SparePartFormData = {
   unitCost: 0,
   notes: '',
   minOrderQty: 1,
-  leadTime: 0
+  leadTime: 0,
 };
 
 const SpareParts: React.FC = () => {
@@ -61,6 +77,12 @@ const SpareParts: React.FC = () => {
 
   // For handling update form changes separately
   const [updateFormData, setUpdateFormData] = useState<Partial<SparePartFormData>>({});
+
+  const [isLogUsageModalOpen, setIsLogUsageModalOpen] = useState(false);
+  const [logUsagePart, setLogUsagePart] = useState<SparePart | null>(null);
+  const [logUsageWorkOrderId, setLogUsageWorkOrderId] = useState('');
+  const [logUsageQuantity, setLogUsageQuantity] = useState(1);
+  const [logUsageLoading, setLogUsageLoading] = useState(false);
 
   const validateForm = () => {
     if (!newPartData.name || !newPartData.location) {
@@ -95,27 +117,31 @@ const SpareParts: React.FC = () => {
   }, []);
 
   const fetchParts = async () => {
-    setLoading(true); // Ensure loading is true at the start of fetch
+    setLoading(true);
     try {
       const data = await sparePartsApi.getAll();
       setParts(data as SparePart[]);
     } catch (error) {
       toast.error('Failed to fetch spare parts');
-      setParts([]); // Set to empty array on error to avoid issues with map
+      setParts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, formType: 'new' | 'update') => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    formType: 'new' | 'update'
+  ) => {
     const { name, value } = e.target;
-    const parsedValue = (name === 'quantity' || name === 'minimumQuantity' || name === 'unitCost')
-                      ? parseFloat(value) || 0
-                      : value;
+    const parsedValue =
+      name === 'quantity' || name === 'minimumQuantity' || name === 'unitCost'
+        ? parseFloat(value) || 0
+        : value;
     if (formType === 'new') {
-      setNewPartData(prev => ({ ...prev, [name]: parsedValue }));
+      setNewPartData((prev) => ({ ...prev, [name]: parsedValue }));
     } else if (formType === 'update' && selectedPartForUpdate) {
-      setUpdateFormData(prev => ({ ...prev, [name]: parsedValue }));
+      setUpdateFormData((prev) => ({ ...prev, [name]: parsedValue }));
     }
   };
 
@@ -133,7 +159,7 @@ const SpareParts: React.FC = () => {
         supplier: newPartData.supplier || undefined,
         location: newPartData.location,
         minOrderQty: newPartData.minOrderQty,
-        leadTime: newPartData.leadTime
+        leadTime: newPartData.leadTime,
       };
       await sparePartsApi.create(partData);
       toast.success('Spare part added successfully!');
@@ -160,7 +186,7 @@ const SpareParts: React.FC = () => {
         supplier: updateFormData.supplier,
         location: updateFormData.location,
         minOrderQty: updateFormData.minOrderQty,
-        leadTime: updateFormData.leadTime
+        leadTime: updateFormData.leadTime,
       };
       await sparePartsApi.update(selectedPartForUpdate.id, updateData);
       toast.success('Spare part updated successfully!');
@@ -185,21 +211,48 @@ const SpareParts: React.FC = () => {
       unitCost: part.unitCost,
       notes: part.notes,
       minOrderQty: (part as any).minOrderQty || 1,
-      leadTime: (part as any).leadTime || 0
+      leadTime: (part as any).leadTime || 0,
     });
     setIsUpdateModalOpen(true);
   };
 
+  const openLogUsageModal = (part: SparePart) => {
+    setLogUsagePart(part);
+    setLogUsageWorkOrderId('');
+    setLogUsageQuantity(1);
+    setIsLogUsageModalOpen(true);
+  };
+
+  const handleLogUsage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logUsagePart || !logUsageWorkOrderId || logUsageQuantity <= 0) {
+      toast.error('Please provide all required fields.');
+      return;
+    }
+    setLogUsageLoading(true);
+    try {
+      await workOrdersApi.logPartUsage(logUsageWorkOrderId, logUsagePart.id, logUsageQuantity);
+      toast.success('Part usage logged successfully!');
+      setIsLogUsageModalOpen(false);
+      fetchParts();
+    } catch (error) {
+      toast.error('Failed to log part usage.');
+    } finally {
+      setLogUsageLoading(false);
+    }
+  };
+
   const uniqueCategories = React.useMemo(() => {
-    const categories = new Set(parts.map(part => part.category));
+    // Filter out undefined categories and ensure all values are strings
+    const categories = new Set(parts.map((part) => part.category || ''));
     return ['all', ...Array.from(categories)];
   }, [parts]);
 
   const filterParts = (parts: SparePart[]) => {
-    return parts.filter(part => {
+    return parts.filter((part) => {
       const searchMatch =
         part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (part.category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (part.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         part.location.toLowerCase().includes(searchTerm.toLowerCase());
 
       const categoryMatch = filterCategory === 'all' || part.category === filterCategory;
@@ -215,7 +268,11 @@ const SpareParts: React.FC = () => {
     });
   };
 
-  const sortData = (data: SparePart[], sortField: keyof SparePart | 'lastUpdated', sortDirection: 'asc' | 'desc') => {
+  const sortData = (
+    data: SparePart[],
+    sortField: keyof SparePart | 'lastUpdated',
+    sortDirection: 'asc' | 'desc'
+  ) => {
     return [...data].sort((a, b) => {
       const valA = sortField === 'lastUpdated' ? a.lastUpdated : a[sortField as keyof SparePart];
       const valB = sortField === 'lastUpdated' ? b.lastUpdated : b[sortField as keyof SparePart];
@@ -256,159 +313,193 @@ const SpareParts: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Spare Parts Inventory</h1>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => fetchParts()}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <ArrowPathIcon className="h-5 w-5 mr-2" />
-            Refresh
-          </button>
-          {(user?.role === 'admin' || user?.role === 'engineer for maintenance') && (
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              Add New Part
-            </button>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Spare Parts Inventory</h1>
+        <Button onClick={() => setIsAddModalOpen(true)}>Add New Part</Button>
+      </div>
+
+      <div className="flex gap-4">
+        <Input
+          placeholder="Search parts..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            {uniqueCategories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat === 'all' ? 'All Categories' : cat || 'Uncategorized'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex gap-4">
+        <Select value={filterAlertStatus} onValueChange={setFilterAlertStatus}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by stock alert status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="lowStockOrAlert">Low Stock / Alerted</SelectItem>
+            <SelectItem value="noAlert">Normal Stock</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={sortField}
+          onValueChange={(value) => setSortField(value as keyof SparePart | 'lastUpdated')}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Name</SelectItem>
+            <SelectItem value="quantity">Quantity</SelectItem>
+            <SelectItem value="category">Category</SelectItem>
+            <SelectItem value="unitCost">Unit Cost</SelectItem>
+            <SelectItem value="lastUpdated">Last Updated</SelectItem>
+          </SelectContent>
+        </Select>
+        <button
+          onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+          className="p-2 border border-gray-300 rounded-md hover:bg-gray-100"
+          aria-label="Toggle sort direction"
+        >
+          {sortDirection === 'asc' ? (
+            <ArrowUp className="h-5 w-5 text-gray-600" />
+          ) : (
+            <ArrowDown className="h-5 w-5 text-gray-600" />
           )}
-        </div>
+        </button>
       </div>
 
-      {/* Filters and Search Section */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-          <div>
-            <label htmlFor="searchParts" className="block text-sm font-medium text-gray-700">Search</label>
-            <div className="relative mt-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                id="searchParts"
-                className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                placeholder="Name, category, location, Eq. ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="filterCategory" className="block text-sm font-medium text-gray-700">Category</label>
-            <select
-              id="filterCategory"
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-            >
-              {uniqueCategories.map(cat => (
-                <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="filterAlertStatus" className="block text-sm font-medium text-gray-700">Stock Alert Status</label>
-            <select
-              id="filterAlertStatus"
-              value={filterAlertStatus}
-              onChange={(e) => setFilterAlertStatus(e.target.value)}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-            >
-              <option value="all">All</option>
-              <option value="lowStockOrAlert">Low Stock / Alerted</option>
-              <option value="noAlert">Normal Stock</option>
-            </select>
-          </div>
-           <div className="flex items-end space-x-2">
-            <div>
-              <label htmlFor="sortField" className="block text-sm font-medium text-gray-700">Sort By</label>
-              <select
-                id="sortField"
-                value={sortField}
-                onChange={(e) => setSortField(e.target.value as keyof SparePart | 'lastUpdated')}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-              >
-                <option value="name">Name</option>
-                <option value="quantity">Quantity</option>
-                <option value="category">Category</option>
-                <option value="unitCost">Unit Cost</option>
-                <option value="lastUpdated">Last Updated</option>
-              </select>
-            </div>
-            <button
-              onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="p-2 border border-gray-300 rounded-md hover:bg-gray-100"
-              aria-label="Toggle sort direction"
-            >
-              {sortDirection === 'asc' ? <ArrowUpIcon className="h-5 w-5 text-gray-600" /> : <ArrowDownIcon className="h-5 w-5 text-gray-600" />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {sortedAndFilteredParts.map((part) => (
-            <li key={part.id}>
-              <div className="px-4 py-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <CubeIcon className="h-6 w-6 text-gray-400 mr-3" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-600 truncate">
-                        {part.name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Category: {part.category}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStockStatus(part.quantity, part.minimumQuantity)}`}>
-                      Stock: {part.quantity}
-                    </span>
-                    {(part.alert || part.quantity <= part.minimumQuantity) && (
-                      <div className={`flex items-center text-sm ml-3 ${part.alert ? 'text-red-600' : 'text-yellow-600'}`}>
-                        <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
-                        {part.alert ? part.alert : 'Low Stock'}
-                      </div>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Min Quantity</TableHead>
+              <TableHead>Location</TableHead>
+              <TableHead>Last Restocked</TableHead>
+              <TableHead>Supplier</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedAndFilteredParts.map((part) => (
+              <TableRow key={part.id}>
+                <TableCell>{part.name}</TableCell>
+                <TableCell>{part.category || 'Uncategorized'}</TableCell>
+                <TableCell>
+                  <span
+                    className={`font-medium ${
+                      part.quantity <= part.minimumQuantity ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
+                    {part.quantity}
+                  </span>
+                </TableCell>
+                <TableCell>{part.minimumQuantity}</TableCell>
+                <TableCell>{part.location}</TableCell>
+                <TableCell>
+                  {part.lastUpdated ? new Date(part.lastUpdated).toLocaleDateString() : 'N/A'}
+                </TableCell>
+                <TableCell>{part.supplier || 'N/A'}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    {(user?.role === 'admin' ||
+                      user?.role === 'engineer for maintenance' ||
+                      user?.role === 'laboratory technician') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openUpdateModal(part)}
+                      >
+                        Edit
+                      </Button>
                     )}
-                  </div>
-                  {(user?.role === 'admin' || user?.role === 'engineer for maintenance' || user?.role === 'laboratory technician') && (
-                    <button
-                      onClick={() => openUpdateModal(part)}
-                      className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openLogUsageModal(part)}
                     >
-                      <PencilIcon className="h-4 w-4 mr-1" />
-                      Edit
-                    </button>
-                  )}
-                </div>
-                <div className="mt-2 sm:flex sm:justify-between">
-                  <div className="sm:flex">
-                    <p className="flex items-center text-sm text-gray-500">Location: {part.location}</p>
-                    <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">Supplier: {part.supplier || 'N/A'}</p>
+                      Log Usage
+                    </Button>
                   </div>
-                  <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                    Unit Cost: ${part.unitCost?.toFixed(2) || '0.00'}
-                  </div>
-                </div>
-                <div className="mt-2 text-sm text-gray-500">
-                  <p>Min Order: {(part as any).minOrderQty || part.minimumQuantity} | Lead Time: {(part as any).leadTime || 0} days</p>
-                  <p>Last Updated: {part.lastUpdated ? new Date(part.lastUpdated).toLocaleDateString() : 'N/A'}</p>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
+
+      {/* Log Usage Modal */}
+      {isLogUsageModalOpen && logUsagePart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-bold mb-4">Log Part Usage</h2>
+            <form onSubmit={handleLogUsage}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Part</label>
+                <div className="font-semibold">{logUsagePart.name}</div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Work Order ID
+                </label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  value={logUsageWorkOrderId}
+                  onChange={(e) => setLogUsageWorkOrderId(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantity Used
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={logUsagePart.quantity}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  value={logUsageQuantity}
+                  onChange={(e) => setLogUsageQuantity(Number(e.target.value))}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  onClick={() => setIsLogUsageModalOpen(false)}
+                  disabled={logUsageLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                  disabled={logUsageLoading}
+                >
+                  {logUsageLoading ? 'Logging...' : 'Log Usage'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default SpareParts; 
+export default SpareParts;

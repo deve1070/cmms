@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  BeakerIcon, 
-  ClipboardDocumentListIcon, 
-  ExclamationTriangleIcon,
-  ChartBarIcon,
-  UserCircleIcon,
-  ArrowLeftOnRectangleIcon
-} from '@heroicons/react/24/outline';
-import { useNavigate } from 'react-router-dom';
+import {
+  Beaker,
+  ClipboardList,
+  AlertTriangle,
+  BarChart,
+  UserCircle,
+  LogOut,
+  Wrench,
+  FileText,
+  BarChart2,
+  Calendar,
+  AlertCircle,
+  PlusCircle,
+} from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getUserDisplayName } from '../types/auth';
 
 interface SidebarItem {
   name: string;
@@ -18,10 +25,10 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
-  { name: 'Overview', icon: ChartBarIcon, path: '/dashboard' },
-  { name: 'Report Issue', icon: ExclamationTriangleIcon, path: '/dashboard/report' },
-  { name: 'Equipment List', icon: BeakerIcon, path: '/dashboard/equipment' },
-  { name: 'My Reports', icon: ClipboardDocumentListIcon, path: '/dashboard/reports' },
+  { name: 'Overview', icon: BarChart, path: '/dashboard' },
+  { name: 'Report Issue', icon: AlertTriangle, path: '/dashboard/report' },
+  { name: 'Equipment List', icon: Beaker, path: '/dashboard/equipment' },
+  { name: 'My Reports', icon: ClipboardList, path: '/dashboard/reports' },
 ];
 
 const Dashboard: React.FC = () => {
@@ -33,6 +40,58 @@ const Dashboard: React.FC = () => {
     await logout();
     navigate('/login');
   };
+
+  const dashboardCards = [
+    {
+      title: 'Work Orders',
+      description: 'View and manage work orders',
+      icon: ClipboardList,
+      link: '/work-orders',
+      color: 'bg-blue-500',
+    },
+    {
+      title: 'Equipment',
+      description: 'View and manage equipment',
+      icon: Wrench,
+      link: '/equipment',
+      color: 'bg-green-500',
+    },
+    {
+      title: 'Reports',
+      description: 'View and generate reports',
+      icon: FileText,
+      link: '/reports',
+      color: 'bg-yellow-500',
+    },
+    {
+      title: 'Analytics',
+      description: 'View analytics and metrics',
+      icon: BarChart2,
+      link: '/analytics',
+      color: 'bg-purple-500',
+    },
+    {
+      title: 'Schedule',
+      description: 'View and manage schedule',
+      icon: Calendar,
+      link: '/schedule',
+      color: 'bg-red-500',
+    },
+    {
+      title: 'Alerts',
+      description: 'View and manage alerts',
+      icon: AlertCircle,
+      link: '/alerts',
+      color: 'bg-orange-500',
+    },
+    {
+      title: 'New Work Order',
+      description: 'Create a new work order',
+      icon: PlusCircle,
+      link: '/work-orders/new',
+      color: 'bg-teal-500',
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -72,9 +131,9 @@ const Dashboard: React.FC = () => {
         
         <div className="absolute bottom-0 w-full p-6 border-t">
           <div className="flex items-center space-x-3 mb-4">
-            <UserCircleIcon className="h-8 w-8 text-gray-600" />
+            <UserCircle className="h-8 w-8 text-gray-600" />
             <div>
-              <p className="font-medium text-gray-800">{user?.name || user?.username || user?.email || "Lab Tech"}</p>
+              <p className="font-medium text-gray-800">{getUserDisplayName(user, 'Lab Tech')}</p>
               <p className="text-sm text-gray-500">Lab Technician</p>
             </div>
           </div>
@@ -82,7 +141,7 @@ const Dashboard: React.FC = () => {
             onClick={handleLogout}
             className="flex items-center space-x-3 w-full p-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
           >
-            <ArrowLeftOnRectangleIcon className="h-6 w-6" />
+            <LogOut className="h-6 w-6" />
             <span>Logout</span>
           </button>
         </div>
@@ -112,43 +171,29 @@ const Dashboard: React.FC = () => {
         </header>
 
         <main className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            {/* Quick Stats */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Active Issues</h3>
-              <p className="text-3xl font-bold text-blue-600">12</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Equipment Status</h3>
-              <p className="text-3xl font-bold text-green-600">85%</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Pending Reports</h3>
-              <p className="text-3xl font-bold text-yellow-600">5</p>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600">Welcome, {getUserDisplayName(user, 'Lab Tech')}</p>
           </div>
 
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-                <div>
-                  <p className="font-medium text-gray-800">New Issue Reported</p>
-                  <p className="text-sm text-gray-500">Microscope calibration issue in Lab 3</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {dashboardCards.map((card) => (
+              <Link
+                key={card.title}
+                to={card.link}
+                className="block p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className={`p-3 rounded-lg ${card.color} text-white`}>
+                    <card.icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">{card.title}</h2>
+                    <p className="text-sm text-gray-600">{card.description}</p>
+                  </div>
                 </div>
-                <span className="ml-auto text-sm text-gray-500">2h ago</span>
-              </div>
-              <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                <BeakerIcon className="h-6 w-6 text-green-500" />
-                <div>
-                  <p className="font-medium text-gray-800">Equipment Maintenance</p>
-                  <p className="text-sm text-gray-500">Centrifuge routine check completed</p>
-                </div>
-                <span className="ml-auto text-sm text-gray-500">5h ago</span>
-              </div>
-            </div>
+              </Link>
+            ))}
           </div>
         </main>
       </div>
@@ -156,4 +201,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

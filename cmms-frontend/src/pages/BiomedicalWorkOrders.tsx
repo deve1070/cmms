@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { workOrdersApi } from '../services/api';
 import {
-  ArrowPathIcon,
-  ExclamationTriangleIcon,
-  ChevronUpDownIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  PlusIcon,
-} from '@heroicons/react/24/outline';
+  RefreshCw,
+  AlertTriangle,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  Plus,
+} from 'lucide-react';
 import BiomedicalLayout from '../components/BiomedicalLayout';
 import { WorkOrder } from '../types/workOrder';
 
@@ -59,10 +59,18 @@ const BiomedicalWorkOrders: React.FC = () => {
       const valB = b[sortField];
       let comparison = 0;
 
-      if (typeof valA === 'string' && typeof valB === 'string') {
-        comparison = valA.localeCompare(valB);
-      } else if (valA && valB && typeof valA === 'object' && typeof valB === 'object') {
-        comparison = new Date(valA as any).getTime() - new Date(valB as any).getTime();
+      if (valA === null || valA === undefined) {
+        comparison = 1;
+      } else if (valB === null || valB === undefined) {
+        comparison = -1;
+      } else if (typeof valA === 'string' && typeof valB === 'string') {
+        if (sortField === 'dueDate') {
+          comparison = new Date(valA).getTime() - new Date(valB).getTime();
+        } else {
+          comparison = valA.localeCompare(valB);
+        }
+      } else if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
       }
 
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -80,11 +88,11 @@ const BiomedicalWorkOrders: React.FC = () => {
 
   const SortIndicator = ({ fieldName }: { fieldName: keyof WorkOrder }) => {
     if (sortField !== fieldName) {
-      return <ChevronUpDownIcon className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
+      return <ChevronsUpDown className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
     }
     return sortDirection === 'asc' ?
-      <ChevronUpIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
-      <ChevronDownIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+      <ChevronUp className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
+      <ChevronDown className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
   };
 
   const uniqueStatuses = ['all', ...Array.from(new Set(workOrders.map(order => order.status)))];
@@ -101,14 +109,14 @@ const BiomedicalWorkOrders: React.FC = () => {
               to="/biomedical/work-orders/new"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <PlusIcon className="h-5 w-5 mr-2" />
+              <Plus className="h-5 w-5 mr-2" />
               New Work Order
             </Link>
             <button
               onClick={fetchWorkOrders}
               className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <ArrowPathIcon className="h-5 w-5 mr-2" />
+              <RefreshCw className="h-5 w-5 mr-2" />
               Refresh
             </button>
           </div>
@@ -238,7 +246,7 @@ const BiomedicalWorkOrders: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.equipmentName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.assignedTo}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(order.dueDate).toLocaleDateString()}
+                        {order.dueDate ? new Date(order.dueDate).toLocaleDateString() : 'Not set'}
                       </td>
                     </tr>
                   ))}
@@ -252,4 +260,4 @@ const BiomedicalWorkOrders: React.FC = () => {
   );
 };
 
-export default BiomedicalWorkOrders; 
+export default BiomedicalWorkOrders;

@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { equipmentApi, maintenanceApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
-  BeakerIcon,
-  ArrowLeftIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  CalendarIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
+  Beaker,
+  ArrowLeft,
+  Search,
+  Filter,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+} from 'lucide-react';
 import { Equipment } from '../types/equipment';
 import { MaintenanceReport } from '../types/maintenance';
 
@@ -102,7 +102,7 @@ const LabEquipmentList: React.FC = () => {
               onClick={() => navigate('/lab/dashboard')}
               className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
             >
-              <ArrowLeftIcon className="h-6 w-6" />
+              <ArrowLeft className="h-6 w-6" />
             </button>
             <h1 className="text-2xl font-bold text-blue-900">Equipment Status</h1>
           </div>
@@ -120,11 +120,11 @@ const LabEquipmentList: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <MagnifyingGlassIcon className="h-5 w-5 text-blue-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <Search className="h-5 w-5 text-blue-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <FunnelIcon className="h-5 w-5 text-blue-400" />
+              <Filter className="h-5 w-5 text-blue-400" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -160,17 +160,17 @@ const LabEquipmentList: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center text-sm text-blue-600">
-                    <BeakerIcon className="h-4 w-4 mr-2" />
+                    <Beaker className="h-4 w-4 mr-2" />
                     <span>{item.location}</span>
                   </div>
 
                   <div className="flex items-center text-sm text-blue-600">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    <Calendar className="h-4 w-4 mr-2" />
                     <span>Last Maintenance: {item.lastMaintenance ? new Date(item.lastMaintenance).toLocaleDateString() : 'Not scheduled'}</span>
                   </div>
 
                   <div className="flex items-center text-sm text-blue-600">
-                    <ClockIcon className="h-4 w-4 mr-2" />
+                    <Clock className="h-4 w-4 mr-2" />
                     <span>Next Maintenance: {item.nextMaintenance ? new Date(item.nextMaintenance).toLocaleDateString() : 'Not scheduled'}</span>
                   </div>
 
@@ -202,4 +202,4 @@ const LabEquipmentList: React.FC = () => {
   );
 };
 
-export default LabEquipmentList; 
+export default LabEquipmentList;

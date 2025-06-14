@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { maintenanceApi } from '../services/api';
 import {
-  ChartBarIcon,
-  DocumentArrowDownIcon,
-  CalendarIcon,
-  FunnelIcon,
-} from '@heroicons/react/24/outline';
+  BarChart,
+  Download,
+  Calendar,
+  Filter,
+} from 'lucide-react';
 import { MaintenanceReport } from '../types/maintenance';
 
 const Reports: React.FC = () => {
@@ -68,7 +68,7 @@ const Reports: React.FC = () => {
           onClick={() => navigate('/maintenance/reports/new')}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <ChartBarIcon className="h-5 w-5 mr-2" />
+          <BarChart className="h-5 w-5 mr-2" />
           Generate Report
         </button>
       </div>
@@ -76,7 +76,7 @@ const Reports: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex items-center space-x-2">
-            <FunnelIcon className="h-5 w-5 text-gray-400" />
+            <Filter className="h-5 w-5 text-gray-400" />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
@@ -89,7 +89,7 @@ const Reports: React.FC = () => {
             </select>
           </div>
           <div className="flex items-center space-x-2">
-            <CalendarIcon className="h-5 w-5 text-gray-400" />
+            <Calendar className="h-5 w-5 text-gray-400" />
             <input
               type="date"
               value={dateRange.start}
@@ -150,7 +150,7 @@ const Reports: React.FC = () => {
                         onClick={() => handleDownloadReport(report.id)}
                         className="text-blue-600 hover:text-blue-900 flex items-center"
                       >
-                        <DocumentArrowDownIcon className="h-5 w-5 mr-1" />
+                        <Download className="h-5 w-5 mr-1" />
                         Download
                       </button>
                     </td>
@@ -165,4 +165,4 @@ const Reports: React.FC = () => {
   );
 };
 
-export default Reports; 
+export default Reports;

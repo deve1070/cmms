@@ -3,14 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { complianceApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
-  ShieldCheckIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  PlusIcon,
-  ArrowPathIcon,
-} from '@heroicons/react/24/outline';
+  ShieldCheck,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Plus,
+  RefreshCw,
+} from 'lucide-react';
 
 interface ComplianceRequirement {
   id: string;
@@ -81,13 +81,13 @@ const Compliance: React.FC = () => {
   const getStatusIcon = (status: ComplianceRequirement['status']) => {
     switch (status) {
       case 'compliant':
-        return <CheckCircleIcon className="h-5 w-5 text-green-600" />;
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'non-compliant':
-        return <XCircleIcon className="h-5 w-5 text-red-600" />;
+        return <XCircle className="h-5 w-5 text-red-600" />;
       case 'pending':
-        return <ClockIcon className="h-5 w-5 text-yellow-600" />;
+        return <Clock className="h-5 w-5 text-yellow-600" />;
       case 'expired':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-gray-600" />;
+        return <AlertTriangle className="h-5 w-5 text-gray-600" />;
       default:
         return null;
     }
@@ -110,13 +110,13 @@ const Compliance: React.FC = () => {
             onClick={() => fetchRequirements()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <ArrowPathIcon className="h-5 w-5 mr-2" />
+            <RefreshCw className="h-5 w-5 mr-2" />
             Refresh
           </button>
           <button
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
+            <Plus className="h-5 w-5 mr-2" />
             Add Requirement
           </button>
         </div>
@@ -149,7 +149,7 @@ const Compliance: React.FC = () => {
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <ShieldCheckIcon className="h-6 w-6 text-gray-400 mr-3" />
+                    <ShieldCheck className="h-6 w-6 text-gray-400 mr-3" />
                     <div>
                       <p className="text-sm font-medium text-blue-600 truncate">
                         {requirement.title}
@@ -191,4 +191,4 @@ const Compliance: React.FC = () => {
   );
 };
 
-export default Compliance; 
+export default Compliance;

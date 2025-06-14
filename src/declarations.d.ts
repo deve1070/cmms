@@ -1,0 +1,11 @@
+declare module '@radix-ui/react-slot';
+declare module '@radix-ui/react-label';
+declare module '@radix-ui/react-select';
+declare module 'class-variance-authority';
+declare module 'lucide-react';
+declare module 'react-day-picker';
+declare module '../components/SharedLayout';
+declare module '../components/ui/input';
+declare module '../components/ui/label';
+declare module '../components/ui/textarea';
+declare module '../contexts/AuthContext'; 

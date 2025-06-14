@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { equipmentApi } from '../services/api';
 import {
-  ArrowPathIcon,
-  ExclamationTriangleIcon,
-  ChevronUpDownIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-} from '@heroicons/react/24/outline';
+  RefreshCw,
+  AlertTriangle,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import BiomedicalLayout from '../components/BiomedicalLayout';
+import SharedLayout from '../components/SharedLayout';
+import BiomedicalSidebar from '../components/BiomedicalSidebar';
 import { Equipment } from '../types/equipment';
 
 const BiomedicalEquipmentList: React.FC = () => {
@@ -80,11 +81,11 @@ const BiomedicalEquipmentList: React.FC = () => {
 
   const SortIndicator = ({ fieldName }: { fieldName: keyof Equipment }) => {
     if (sortField !== fieldName) {
-      return <ChevronUpDownIcon className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
+      return <ChevronsUpDown className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
     }
     return sortDirection === 'asc' ?
-      <ChevronUpIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
-      <ChevronDownIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+      <ChevronUp className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
+      <ChevronDown className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
   };
 
   const getStatusColor = (status: Equipment['status']) => {
@@ -106,7 +107,10 @@ const BiomedicalEquipmentList: React.FC = () => {
   const uniqueStatuses = ['all', ...Array.from(new Set(equipment.map(item => item.status)))];
 
   return (
-    <BiomedicalLayout>
+    <SharedLayout
+      sidebar={<BiomedicalSidebar />}
+      title="Biomedical Equipment"
+    >
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Equipment List</h1>
@@ -114,7 +118,7 @@ const BiomedicalEquipmentList: React.FC = () => {
             onClick={fetchEquipment}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <ArrowPathIcon className="h-5 w-5 mr-2" />
+            <RefreshCw className="h-5 w-5 mr-2" />
             Refresh
           </button>
         </div>
@@ -228,8 +232,8 @@ const BiomedicalEquipmentList: React.FC = () => {
           )}
         </div>
       </div>
-    </BiomedicalLayout>
+    </SharedLayout>
   );
 };
 
-export default BiomedicalEquipmentList; 
+export default BiomedicalEquipmentList;

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { reportsApi } from '../services/api';
 import {
-  ArrowPathIcon,
-  ChartBarIcon,
-  ExclamationTriangleIcon,
-  ChevronUpDownIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-} from '@heroicons/react/24/outline';
+  RefreshCw,
+  BarChart,
+  AlertTriangle,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import BiomedicalLayout from '../components/BiomedicalLayout';
 
 interface Report {
@@ -84,11 +84,11 @@ const BiomedicalReports: React.FC = () => {
 
   const SortIndicator = ({ fieldName }: { fieldName: keyof Report }) => {
     if (sortField !== fieldName) {
-      return <ChevronUpDownIcon className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
+      return <ChevronsUpDown className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
     }
     return sortDirection === 'asc' ?
-      <ChevronUpIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
-      <ChevronDownIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+      <ChevronUp className="h-4 w-4 text-blue-600 ml-1 inline-block" /> :
+      <ChevronDown className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
   };
 
   const uniqueTypes = ['all', ...Array.from(new Set(reports.map(report => report.type)))];
@@ -102,7 +102,7 @@ const BiomedicalReports: React.FC = () => {
             onClick={fetchReports}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <ArrowPathIcon className="h-5 w-5 mr-2" />
+            <RefreshCw className="h-5 w-5 mr-2" />
             Refresh
           </button>
         </div>
@@ -193,4 +193,4 @@ const BiomedicalReports: React.FC = () => {
   );
 };
 
-export default BiomedicalReports; 
+export default BiomedicalReports;

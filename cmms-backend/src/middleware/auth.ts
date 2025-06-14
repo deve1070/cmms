@@ -1,77 +1,99 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { AuthenticatedRequest } from '../types/express';
 import { Role, Permission } from '../config/permissions';
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 export interface AuthRequest extends Request {
   user?: {
     id: string;
-    role: Role; // Updated to use Role enum
-    permissions: Permission[]; // Updated to use Permission enum array
+    username: string;
+    email: string;
+    role: Role;
+    permissions: Permission[];
   };
 }
 
-export const authenticateToken = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const authenticateToken = async (req: AuthRequest, res: Response, next: Function) => {
+  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ error: 'Authentication token required' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
-    });
-
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    req.user = {
-      id: user.id,
-      role: user.role as Role, // Cast to Role enum
-      permissions: JSON.parse(user.permissions) as Permission[] // Cast to Permission enum array
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as {
+      id: string;
+      username: string;
+      email: string;
+      role: Role;
+      permissions: Permission[];
     };
-
+    req.user = decoded;
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
+    return res.status(401).json({ message: 'Invalid token' });
   }
 };
 
-export const checkRole = (roles: Role[]) => { // Updated parameter type
+export const authorizeRole = (roles: Role[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(403).json({
+        error: 'User not authenticated',
+        code: 'NOT_AUTHENTICATED'
+      });
     }
 
-    if (!req.user.role || !roles.includes(req.user.role)) { // Added null check for req.user.role
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
+    const userRole = req.user.role.toUpperCase();
+    const hasRole = roles.some(role => role.toUpperCase() === userRole);
 
+    if (!hasRole) {
+      return res.status(403).json({
+        error: 'Insufficient permissions',
+        code: 'ROLE_UNAUTHORIZED',
+        requiredRoles: roles,
+        userRole: req.user.role
+      });
+    }
     next();
   };
 };
 
-export const checkPermission = (permission: Permission) => { // Updated parameter type
+export const authorizePermission = (permission: Permission) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+    if (!req.user || !req.user.permissions.includes(permission)) {
+      return res.status(403).json({
+        error: 'Missing required permission',
+        code: 'PERMISSION_DENIED',
+        requiredPermission: permission
+      });
     }
-
-    if (!req.user.permissions || !req.user.permissions.includes(permission)) { // Added null check for req.user.permissions
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     next();
   };
+};
+
+export const authMiddleware = (req: AuthRequest, res: Response, next: Function) => {
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as {
+      id: string;
+      username: string;
+      email: string;
+      role: Role;
+      permissions: Permission[];
+    };
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid token' });
+  }
 };

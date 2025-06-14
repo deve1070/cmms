@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { maintenanceApi } from '../services/api';
 import {
-  CalendarIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+} from 'lucide-react';
 import { MaintenanceSchedule } from '../types/maintenance';
 
 const MaintenanceScheduleView: React.FC = () => {
@@ -64,11 +64,11 @@ const MaintenanceScheduleView: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircleIcon className="h-5 w-5" />;
+        return <CheckCircle className="h-5 w-5" />;
       case 'in_progress':
-        return <ClockIcon className="h-5 w-5" />;
+        return <Clock className="h-5 w-5" />;
       case 'pending':
-        return <ExclamationTriangleIcon className="h-5 w-5" />;
+        return <AlertTriangle className="h-5 w-5" />;
       default:
         return null;
     }
@@ -122,7 +122,7 @@ const MaintenanceScheduleView: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center text-sm text-blue-600">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    <Calendar className="h-4 w-4 mr-2" />
                     <span>
                       Scheduled: {schedule.scheduledDate ? new Date(schedule.scheduledDate).toLocaleDateString() : 'Not scheduled'}
                     </span>
@@ -155,4 +155,4 @@ const MaintenanceScheduleView: React.FC = () => {
   );
 };
 
-export default MaintenanceScheduleView; 
+export default MaintenanceScheduleView;

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { equipmentApi } from '../services/api';
 import {
-  PlusIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  ChevronUpDownIcon, // For sorting indication
-  ChevronUpIcon,     // For asc sort indication
-  ChevronDownIcon,   // For desc sort indication
-} from '@heroicons/react/24/outline'; // Using outline for consistency, can switch to solid if preferred
+  Plus,
+  Search,
+  Filter,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 
 // TODO: Move to a shared types file
 interface Equipment {
@@ -42,10 +42,10 @@ const EquipmentList: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
-    const fetchEquipmentList = async () => { // Renamed function
+    const fetchEquipmentList = async () => {
       try {
         setIsLoading(true);
-        const data = await equipmentApi.getAll() as Equipment[]; // Assuming getAll returns data matching the new interface
+        const data = await equipmentApi.getAll() as Equipment[];
         setEquipmentList(data);
       } catch (error) {
         console.error('Error fetching equipment list:', error);
@@ -66,7 +66,7 @@ const EquipmentList: React.FC = () => {
       (item.locationDescription?.toLowerCase() || '').includes(searchString) ||
       (item.category?.toLowerCase() || '').includes(searchString) ||
       (item.department?.toLowerCase() || '').includes(searchString);
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus; // Direct comparison with updated filter values
+    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -89,15 +89,15 @@ const EquipmentList: React.FC = () => {
 
   const SortIndicator = ({ fieldName }: { fieldName: keyof Equipment }) => {
     if (sortField !== fieldName) {
-      return <ChevronUpDownIcon className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
+      return <ChevronsUpDown className="h-4 w-4 text-gray-400 ml-1 inline-block" />;
     }
     if (sortDirection === 'asc') {
-      return <ChevronUpIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+      return <ChevronUp className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
     }
-    return <ChevronDownIcon className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
+    return <ChevronDown className="h-4 w-4 text-blue-600 ml-1 inline-block" />;
   };
 
-  const getStatusColor = (status: Equipment['status']) => { // Typed status parameter
+  const getStatusColor = (status: Equipment['status']) => {
     switch (status) {
       case 'Operational':
         return 'bg-green-100 text-green-800';
@@ -141,10 +141,10 @@ const EquipmentList: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Equipment List</h1>
         <button
-          onClick={() => navigate('/equipment/new')} // Updated navigation path
+          onClick={() => navigate('/equipment/new')}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <PlusIcon className="h-5 w-5 mr-2 stroke-1" />
+          <Plus className="h-5 w-5 mr-2 stroke-1" />
           Add Equipment
         </button>
       </div>
@@ -153,7 +153,7 @@ const EquipmentList: React.FC = () => {
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1">
             <div className="relative">
-              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 stroke-1" />
+              <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 stroke-1" />
               <input
                 type="text"
                 placeholder="Search equipment..."
@@ -164,7 +164,7 @@ const EquipmentList: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <FunnelIcon className="h-5 w-5 text-gray-400 stroke-1" />
+            <Filter className="h-5 w-5 text-gray-400 stroke-1" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -204,7 +204,7 @@ const EquipmentList: React.FC = () => {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                     <button onClick={() => handleSort('locationDescription')} className="flex items-center hover:text-blue-600">
+                    <button onClick={() => handleSort('locationDescription')} className="flex items-center hover:text-blue-600">
                       Location <SortIndicator fieldName="locationDescription" />
                     </button>
                   </th>
@@ -219,7 +219,7 @@ const EquipmentList: React.FC = () => {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                     <button onClick={() => handleSort('lastMaintenance')} className="flex items-center hover:text-blue-600">
+                    <button onClick={() => handleSort('lastMaintenance')} className="flex items-center hover:text-blue-600">
                       Last Maintenance <SortIndicator fieldName="lastMaintenance" />
                     </button>
                   </th>
@@ -258,4 +258,4 @@ const EquipmentList: React.FC = () => {
   );
 };
 
-export default EquipmentList; 
+export default EquipmentList;

@@ -1,15 +1,28 @@
-export type UserRole = 'admin' | 'engineer for maintenance' | 'laboratory technician' | 'biomedical engineer';
+// src/types/auth.ts
+
+export type FrontendUserRole = 
+  | 'admin'
+  | 'biomedical engineer'
+  | 'engineer for maintenance'
+  | 'laboratory technician';
+
+export type BackendUserRole = 
+  | 'admin'
+  | 'biomedical engineer'
+  | 'engineer for maintenance'
+  | 'laboratory technician';
 
 export interface User {
   id: string;
   username: string;
   email: string;
   name?: string;
-  role: UserRole;
+  role: FrontendUserRole;
   department?: string;
   permissions: string[];
   status: 'active' | 'inactive' | 'suspended';
-  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LoginCredentials {
@@ -22,9 +35,54 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  token: string | null;
 }
 
 export interface LoginResponse {
   token: string;
   user: User;
-} 
+}
+
+export interface RegisterCredentials extends LoginCredentials {
+  email: string;
+  role: BackendUserRole;
+}
+
+// Role mappings with exhaustive type checking
+const roleMappings: Record<FrontendUserRole, BackendUserRole> = {
+  'admin': 'admin',
+  'biomedical engineer': 'biomedical engineer',
+  'engineer for maintenance': 'engineer for maintenance',
+  'laboratory technician': 'laboratory technician'
+};
+
+const reverseRoleMappings: Record<BackendUserRole, FrontendUserRole> = {
+  'admin': 'admin',
+  'biomedical engineer': 'biomedical engineer',
+  'engineer for maintenance': 'engineer for maintenance',
+  'laboratory technician': 'laboratory technician'
+};
+
+export const mapToBackendRole = (role: FrontendUserRole): BackendUserRole => {
+  return roleMappings[role];
+};
+
+export const mapToFrontendRole = (role: BackendUserRole): FrontendUserRole => {
+  return reverseRoleMappings[role];
+};
+
+export const getUserDisplayName = (user?: User | null, customFallback?: string): string => {
+  if (!user) return customFallback || 'User';
+  
+  const roleFallback = user.role === 'biomedical engineer' ? 'Biomedical Engineer' :
+                     user.role === 'engineer for maintenance' ? 'Maintenance Technician' :
+                     user.role === 'laboratory technician' ? 'Lab Technician' : 'Administrator';
+  
+  return user.username || user.email || customFallback || roleFallback;
+};
+
+export const getUserRoleDisplayName = (role: FrontendUserRole): string => {
+  return role === 'biomedical engineer' ? 'Biomedical Engineer' :
+         role === 'engineer for maintenance' ? 'Maintenance Technician' :
+         role === 'laboratory technician' ? 'Lab Technician' : 'Administrator';
+};

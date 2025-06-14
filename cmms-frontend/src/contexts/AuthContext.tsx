@@ -1,11 +1,20 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { User, LoginCredentials, AuthState } from '../types/auth';
-import { login as apiLogin } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { User, LoginCredentials, mapToFrontendRole } from '../types/auth';
 
-interface AuthContextType extends AuthState {
+interface LoginResponse {
+  token: string;
+  user: User;
+}
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,92 +25,114 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Initialize auth state from localStorage
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (e) {
-        console.error('Error parsing stored user:', e);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
+  const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+    const baseUrl = 'http://localhost:3002';
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = user.token;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...options.headers,
+    };
+
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      credentials: 'include',
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'An error occurred');
     }
-    setIsLoading(false);
-  }, []);
 
-  // Handle navigation based on auth state
-  useEffect(() => {
-    if (!isLoading) {
-      const currentPath = location.pathname;
-      const isPublicRoute = ['/login', '/welcome'].includes(currentPath);
+    return response.json();
+  };
 
-      if (!isAuthenticated && !isPublicRoute) {
-        navigate('/login', { replace: true });
-      } else if (isAuthenticated && isPublicRoute) {
-        const userRole = user?.role.toLowerCase();
-        console.log('User role:', userRole); // Debug log
-        const dashboardPath = userRole === 'admin' ? '/admin/dashboard' :
-                            userRole === 'engineer for maintenance' ? '/maintenance/dashboard' :
-                            userRole === 'laboratory technician' ? '/lab/dashboard' :
-                            userRole === 'biomedical engineer' ? '/biomedical/dashboard' :
-                            '/welcome';
-        console.log('Redirecting to:', dashboardPath); // Debug log
-        navigate(dashboardPath, { replace: true });
-      }
-    }
-  }, [isAuthenticated, isLoading, location.pathname, navigate, user?.role]);
-
-  const login = useCallback(async (credentials: LoginCredentials) => {
+  const checkAuth = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-      const response = await apiLogin(credentials);
-      const { token, user } = response;
-      
-      // Store auth data
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      // Update state
-      setUser(user);
-      setIsAuthenticated(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
 
-      // Get the correct dashboard path
-      const userRole = user.role.toLowerCase();
-      const dashboardPath = userRole === 'admin' ? '/admin/dashboard' :
-                          userRole === 'engineer for maintenance' ? '/maintenance/dashboard' :
-                          userRole === 'laboratory technician' ? '/lab/dashboard' :
-                          userRole === 'biomedical engineer' ? '/biomedical/dashboard' :
-                          '/welcome';
-      
-      // Navigate to dashboard
-      navigate(dashboardPath, { replace: true });
+      const data = await apiRequest('/api/auth/check');
+      const userData: User = {
+        ...data.user,
+        role: mapToFrontendRole(data.user.role),
+      };
+
+      setUser(userData);
+      setIsAuthenticated(true);
+      localStorage.setItem('user', JSON.stringify(userData));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during login');
-      throw err;
+      console.error('Auth check error:', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const login = async (credentials: LoginCredentials): Promise<void> => {
+    try {
+      console.log('Making login request with credentials:', credentials);
+      const response = await apiRequest('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials)
+      }) as LoginResponse;
+      console.log('Received login response:', response);
+
+      const mappedUser = {
+        ...response.user,
+        role: response.user.role
+      };
+      console.log('Mapped user data:', mappedUser);
+
+      setUser(mappedUser);
+      localStorage.setItem('user', JSON.stringify(mappedUser));
+      localStorage.setItem('token', response.token);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const logout = useCallback(async () => {
+    try {
+      await apiRequest('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setIsAuthenticated(false);
+      navigate('/login');
+    }
   }, [navigate]);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    setIsAuthenticated(false);
-    navigate('/login', { replace: true });
-  }, [navigate]);
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const contextValue = {
+    user,
+    isAuthenticated,
+    isLoading,
+    error,
+    login,
+    logout,
+    checkAuth,
+  };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, error, login, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
@@ -113,4 +144,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

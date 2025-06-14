@@ -3,12 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { equipmentApi, workOrdersApi } from '../services/api';
 import { toast } from 'react-hot-toast';
-import { 
-  WrenchScrewdriverIcon,
-  DocumentTextIcon,
-  ArrowLeftIcon,
-  CheckCircleIcon
-} from '@heroicons/react/24/outline';
+import { ArrowLeft } from 'lucide-react';
 
 interface Equipment {
   id: string;
@@ -91,7 +86,7 @@ const ReportIssue: React.FC = () => {
               onClick={() => navigate('/lab/dashboard')}
               className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
             >
-              <ArrowLeftIcon className="h-6 w-6" />
+              <ArrowLeft className="h-6 w-6" />
             </button>
             <h1 className="text-2xl font-bold text-blue-900">Report Equipment Issue</h1>
           </div>
@@ -203,4 +198,4 @@ const ReportIssue: React.FC = () => {
   );
 };
 
-export default ReportIssue; 
+export default ReportIssue;

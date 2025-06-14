@@ -1,14 +1,14 @@
 import axios from 'axios';
-import { User, LoginCredentials, LoginResponse } from '../types/auth';
+import { User, LoginCredentials, LoginResponse, mapToBackendRole, FrontendUserRole } from '../types/auth';
 import { Budget } from '../types/budget';
 import { ComplianceRequirement } from '../types/compliance';
 import { Contract } from '../types/contract';
 import { Equipment } from '../types/equipment';
 import { WorkOrder } from '../types/workOrder';
-import { MaintenanceSchedule, MaintenanceReport } from '../types/maintenance';
+import { MaintenanceReport } from '../types/maintenance';
 import { SparePart } from '../types/sparePart';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -17,27 +17,34 @@ const api = axios.create({
   },
 });
 
-// Add request interceptor to include auth token
+// Add request interceptor to include auth token and map roles
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Map role to backend format if it exists in the request data
+  if (config.data && typeof config.data === 'object' && 'role' in config.data) {
+    const data = config.data as { role: FrontendUserRole };
+    config.data = {
+      ...config.data,
+      role: mapToBackendRole(data.role)
+    };
+  }
+
   return config;
 });
 
-// Add response interceptor for error handling
+// Add response interceptor to handle token expiration
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Only clear auth if we're not already on the login page
-      if (!window.location.pathname.includes('/login')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      }
+    if (error.response?.status === 403 || error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -167,9 +174,7 @@ export const usersApi = {
 export const maintenanceApi = {
   getAll: async (params?: Record<string, any>): Promise<MaintenanceReport[]> => {
     try {
-      console.log('Fetching maintenance reports with params:', params);
       const response = await api.get('/maintenance', { params });
-      console.log('Maintenance reports response:', response);
       const data = response.data as any[];
       return data.map((report) => ({
         ...report,

@@ -3,17 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { maintenanceApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
-  ArrowLeftIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  CalendarIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  BeakerIcon,
-  ChartBarIcon,
-  DocumentTextIcon,
-} from '@heroicons/react/24/outline';
+  ArrowLeft,
+  Search,
+  Filter,
+  Calendar,
+  Clock,
+  AlertTriangle,
+  Beaker,
+} from 'lucide-react';
 import { MaintenanceReport } from '../types/maintenance';
 
 const LabReports: React.FC = () => {
@@ -74,9 +71,9 @@ const LabReports: React.FC = () => {
   const getTypeIcon = (type: MaintenanceReport['type']) => {
     switch (type) {
       case 'preventive':
-        return <CalendarIcon className="h-5 w-5 text-blue-600" />;
+        return <Calendar className="h-5 w-5 text-blue-600" />;
       case 'corrective':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />;
+        return <AlertTriangle className="h-5 w-5 text-red-600" />;
       default:
         return null;
     }
@@ -100,7 +97,7 @@ const LabReports: React.FC = () => {
               onClick={() => navigate('/lab/dashboard')}
               className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
             >
-              <ArrowLeftIcon className="h-6 w-6" />
+              <ArrowLeft className="h-6 w-6" />
             </button>
             <h1 className="text-2xl font-bold text-blue-900">Maintenance Reports</h1>
           </div>
@@ -118,12 +115,12 @@ const LabReports: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <MagnifyingGlassIcon className="h-5 w-5 text-blue-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <Search className="h-5 w-5 text-blue-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <FunnelIcon className="h-5 w-5 text-blue-400" />
+                <Filter className="h-5 w-5 text-blue-400" />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -136,7 +133,7 @@ const LabReports: React.FC = () => {
                 </select>
               </div>
               <div className="flex items-center space-x-2">
-                <FunnelIcon className="h-5 w-5 text-blue-400" />
+                <Filter className="h-5 w-5 text-blue-400" />
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
@@ -173,12 +170,12 @@ const LabReports: React.FC = () => {
 
               <div className="space-y-3">
                 <div className="flex items-center text-sm text-blue-600">
-                  <BeakerIcon className="h-4 w-4 mr-2" />
+                  <Beaker className="h-4 w-4 mr-2" />
                   <span>{report.equipment?.location || 'Unknown Location'}</span>
                 </div>
 
                 <div className="flex items-center text-sm text-blue-600">
-                  <ClockIcon className="h-4 w-4 mr-2" />
+                  <Clock className="h-4 w-4 mr-2" />
                   <span>Date: {new Date(report.date).toLocaleDateString()}</span>
                 </div>
 
@@ -195,4 +192,4 @@ const LabReports: React.FC = () => {
   );
 };
 
-export default LabReports; 
+export default LabReports;

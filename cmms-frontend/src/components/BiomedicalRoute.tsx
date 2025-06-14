@@ -1,28 +1,32 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BiomedicalLayout from './BiomedicalLayout';
 
-interface BiomedicalRouteProps {
-  children: React.ReactNode;
-}
-
-const BiomedicalRoute: React.FC<BiomedicalRouteProps> = ({ children }) => {
+const BiomedicalRoute: React.FC = () => {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (user.role.toLowerCase() !== 'biomedical engineer') {
-    return <Navigate to="/welcome" />;
+  if (user.role.toLowerCase() !== 'biomedical_engineer') {
+    return <Navigate to="/welcome" replace />;
   }
 
-  return <BiomedicalLayout>{children}</BiomedicalLayout>;
+  return (
+    <BiomedicalLayout>
+      <Outlet />
+    </BiomedicalLayout>
+  );
 };
 
-export default BiomedicalRoute; 
+export default BiomedicalRoute;

@@ -4,13 +4,13 @@ import { contractsApi } from '../services/api';
 import { Contract } from '../types/contract';
 import { toast } from 'react-hot-toast';
 import {
-  DocumentTextIcon,
-  PlusIcon,
-  ArrowPathIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-} from '@heroicons/react/24/outline';
+  FileText,
+  Plus,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
 
 const Contracts: React.FC = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -56,13 +56,13 @@ const Contracts: React.FC = () => {
   const getStatusIcon = (status: Contract['status']) => {
     switch (status) {
       case 'active':
-        return <CheckCircleIcon className="h-5 w-5 text-green-600" />;
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'expired':
-        return <XCircleIcon className="h-5 w-5 text-red-600" />;
+        return <XCircle className="h-5 w-5 text-red-600" />;
       case 'pending':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
       case 'cancelled':
-        return <XCircleIcon className="h-5 w-5 text-gray-600" />;
+        return <XCircle className="h-5 w-5 text-gray-600" />;
       default:
         return null;
     }
@@ -92,13 +92,13 @@ const Contracts: React.FC = () => {
             onClick={() => fetchContracts()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <ArrowPathIcon className="h-5 w-5 mr-2" />
+            <RefreshCw className="h-5 w-5 mr-2" />
             Refresh
           </button>
           <button
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
+            <Plus className="h-5 w-5 mr-2" />
             Add Contract
           </button>
         </div>
@@ -131,7 +131,7 @@ const Contracts: React.FC = () => {
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <DocumentTextIcon className="h-6 w-6 text-gray-400 mr-3" />
+                    <FileText className="h-6 w-6 text-gray-400 mr-3" />
                     <div>
                       <p className="text-sm font-medium text-blue-600 truncate">
                         {contract.title}
@@ -159,7 +159,7 @@ const Contracts: React.FC = () => {
                     <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
                       End: {new Date(contract.endDate).toLocaleDateString()}
                       {isExpiringSoon(contract.endDate) && (
-                        <ExclamationTriangleIcon className="h-4 w-4 ml-1 text-yellow-500" />
+                        <AlertTriangle className="h-4 w-4 ml-1 text-yellow-500" />
                       )}
                     </p>
                   </div>
@@ -180,4 +180,4 @@ const Contracts: React.FC = () => {
   );
 };
 
-export default Contracts; 
+export default Contracts;
