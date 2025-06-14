@@ -1,16 +1,8 @@
 // src/types/auth.ts
 
-export type FrontendUserRole = 
-  | 'admin'
-  | 'biomedical engineer'
-  | 'engineer for maintenance'
-  | 'laboratory technician';
+export type FrontendUserRole = 'admin' | 'biomedical engineer' | 'laboratory technician' | 'maintenance technician';
 
-export type BackendUserRole = 
-  | 'admin'
-  | 'biomedical engineer'
-  | 'engineer for maintenance'
-  | 'laboratory technician';
+export type BackendUserRole = 'admin' | 'biomedical engineer' | 'laboratory technician' | 'engineer for maintenance';
 
 export interface User {
   id: string;
@@ -53,13 +45,14 @@ const roleMappings: Record<FrontendUserRole, BackendUserRole> = {
   'admin': 'admin',
   'biomedical engineer': 'biomedical engineer',
   'engineer for maintenance': 'engineer for maintenance',
-  'laboratory technician': 'laboratory technician'
+  'laboratory technician': 'laboratory technician',
+  'maintenance technician': 'engineer for maintenance'
 };
 
 const reverseRoleMappings: Record<BackendUserRole, FrontendUserRole> = {
   'admin': 'admin',
   'biomedical engineer': 'biomedical engineer',
-  'engineer for maintenance': 'engineer for maintenance',
+  'engineer for maintenance': 'maintenance technician',
   'laboratory technician': 'laboratory technician'
 };
 
@@ -67,8 +60,8 @@ export const mapToBackendRole = (role: FrontendUserRole): BackendUserRole => {
   return roleMappings[role];
 };
 
-export const mapToFrontendRole = (role: BackendUserRole): FrontendUserRole => {
-  return reverseRoleMappings[role];
+export const mapToFrontendRole = (backendRole: BackendUserRole): FrontendUserRole => {
+  return reverseRoleMappings[backendRole];
 };
 
 export const getUserDisplayName = (user?: User | null, customFallback?: string): string => {

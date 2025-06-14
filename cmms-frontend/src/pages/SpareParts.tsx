@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { sparePartsApi } from '../services/api';
-import { workOrdersApi } from '../services/api';
+import { sparePartsApi, workOrdersApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
   Plus,
@@ -14,6 +13,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import type { SparePart } from '../types/sparePart';
+import type { WorkOrder } from '../types/workOrder';
 import type { FrontendUserRole } from '../types/auth';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -57,6 +57,7 @@ const initialNewPartData: SparePartFormData = {
 
 const SpareParts: React.FC = () => {
   const [parts, setParts] = useState<SparePart[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
@@ -114,6 +115,7 @@ const SpareParts: React.FC = () => {
 
   useEffect(() => {
     fetchParts();
+    fetchWorkOrders();
   }, []);
 
   const fetchParts = async () => {
@@ -126,6 +128,16 @@ const SpareParts: React.FC = () => {
       setParts([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWorkOrders = async () => {
+    try {
+      const data = await workOrdersApi.getAll();
+      setWorkOrders(data);
+    } catch (error) {
+      console.error('Error fetching work orders:', error);
+      toast.error('Failed to fetch work orders');
     }
   };
 
@@ -229,14 +241,42 @@ const SpareParts: React.FC = () => {
       toast.error('Please provide all required fields.');
       return;
     }
+
+    if (logUsageQuantity > logUsagePart.quantity) {
+      toast.error('Cannot use more parts than available in stock.');
+      return;
+    }
+
     setLogUsageLoading(true);
     try {
-      await workOrdersApi.logPartUsage(logUsageWorkOrderId, logUsagePart.id, logUsageQuantity);
+      const response = await workOrdersApi.logPartUsage(logUsageWorkOrderId, logUsagePart.id, logUsageQuantity);
+      
+      // Update the local state to reflect the new quantity
+      setParts(prevParts => 
+        prevParts.map(part => 
+          part.id === logUsagePart.id 
+            ? { ...part, quantity: part.quantity - logUsageQuantity }
+            : part
+        )
+      );
+
       toast.success('Part usage logged successfully!');
       setIsLogUsageModalOpen(false);
-      fetchParts();
-    } catch (error) {
-      toast.error('Failed to log part usage.');
+      
+      // Refresh the parts list to ensure we have the latest data
+      await fetchParts();
+    } catch (error: any) {
+      console.error('Error logging part usage:', error);
+      if (error.response?.status === 404) {
+        toast.error('Work order not found. Please check the work order ID.');
+      } else if (error.response?.status === 400) {
+        toast.error('Not enough parts in stock.');
+      } else if (error.response?.status === 401 || error.response?.status === 403) {
+        // Don't show error message for auth errors, let the interceptor handle it
+        return;
+      } else {
+        toast.error('Failed to log part usage. Please try again.');
+      }
     } finally {
       setLogUsageLoading(false);
     }
@@ -453,15 +493,23 @@ const SpareParts: React.FC = () => {
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Work Order ID
+                  Work Order
                 </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
+                <Select
                   value={logUsageWorkOrderId}
-                  onChange={(e) => setLogUsageWorkOrderId(e.target.value)}
-                  required
-                />
+                  onValueChange={setLogUsageWorkOrderId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a work order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workOrders.map((wo) => (
+                      <SelectItem key={wo.id} value={wo.id}>
+                        {wo.issue} ({wo.type})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">

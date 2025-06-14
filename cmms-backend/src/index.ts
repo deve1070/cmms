@@ -8,6 +8,14 @@ import { authenticateToken, AuthRequest } from './middleware/auth';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Role } from './config/permissions';
+import usersRouter from './routes/users';
+import equipmentRouter from './routes/equipment';
+import workOrdersRouter from './routes/workOrders';
+import maintenanceRouter from './routes/maintenance';
+import reportsRouter from './routes/reports';
+import budgetsRouter from './routes/budgets';
+import complianceRouter from './routes/compliance';
+import issueReportsRouter from './routes/issueReports';
 
 const app = express();
 const port = 3002;
@@ -57,12 +65,15 @@ app.use(cors({
   origin: ['http://localhost:3004', 'http://localhost:3000', 'http://localhost:3003'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Request headers:', req.headers);
+  console.log('Request body:', req.body);
   next();
 });
 
@@ -483,17 +494,53 @@ app.get('/api/maintenance/:id', authenticateToken, async (req: AuthRequest, res)
 
 app.post('/api/maintenance', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    const {
+      equipmentId,
+      type,
+      description,
+      date,
+      partsUsed,
+      findings,
+      recommendations,
+      nextDueDate
+    } = req.body;
+
+    // Create maintenance report
     const maintenance = await prisma.maintenanceReport.create({
       data: {
-        ...req.body,
-        performedBy: { connect: { id: req.user?.id } }
+        equipmentId,
+        type,
+        description,
+        date: new Date(date),
+        partsUsed,
+        findings,
+        recommendations,
+        nextDueDate: nextDueDate ? new Date(nextDueDate) : null,
+        performedById: req.user?.id || '',
+        status: 'Completed'
       },
       include: {
         equipment: true,
         performedBy: true
       }
     });
-    res.json(maintenance);
+
+    // Update the corresponding work order status
+    await prisma.workOrder.updateMany({
+      where: {
+        equipmentId: equipmentId,
+        status: {
+          in: ['In Progress', 'Assigned']
+        }
+      },
+      data: {
+        status: 'Completed',
+        completedAt: new Date(),
+        completionNotes: description
+      }
+    });
+
+    res.status(201).json(maintenance);
   } catch (error) {
     console.error('Error creating maintenance report:', error);
     res.status(500).json({ error: 'Failed to create maintenance report' });
@@ -543,6 +590,16 @@ app.get('/api/spare-parts', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch spare parts' });
   }
 });
+
+// Routes
+app.use('/api/users', usersRouter);
+app.use('/api/equipment', equipmentRouter);
+app.use('/api/work-orders', workOrdersRouter);
+app.use('/api/maintenance', maintenanceRouter);
+app.use('/api/reports', reportsRouter);
+app.use('/api/budgets', budgetsRouter);
+app.use('/api/compliance', complianceRouter);
+app.use('/api/issue-reports', issueReportsRouter);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

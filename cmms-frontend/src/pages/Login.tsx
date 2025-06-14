@@ -18,31 +18,7 @@ const Login: React.FC = () => {
     console.log('Login attempt:', { username, password });
 
     try {
-      const response = await login({ username, password });
-      console.log('Login response:', response);
-      
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      console.log('User data from localStorage:', userData);
-      console.log('User role:', userData.role);
-
-      // Redirect based on role
-      switch (userData.role) {
-        case 'admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'biomedical engineer':
-          navigate('/biomedical/dashboard');
-          break;
-        case 'engineer for maintenance':
-          navigate('/maintenance/dashboard');
-          break;
-        case 'laboratory technician':
-          navigate('/lab/dashboard');
-          break;
-        default:
-          console.error('Unknown role:', userData.role);
-          setError('Invalid user role');
-      }
+      await login({ username, password });
     } catch (err) {
       console.error('Login error:', err);
       setError('Invalid username or password');

@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { equipmentApi, workOrdersApi, maintenanceApi } from '../services/api';
+import { equipmentApi, workOrdersApi, maintenanceApi, issueReportsApi } from '../services/api';
 import { toast } from 'react-hot-toast';
 import {
-  BarChart3,
   Wrench,
   FileText,
   Bell,
@@ -23,6 +22,7 @@ import SharedLayout from '../components/SharedLayout';
 import type { Equipment } from '../types/equipment';
 import type { WorkOrder } from '../types/workOrder';
 import type { MaintenanceReport } from '../types/maintenance';
+import type { IssueReport, CreateIssueReportDto } from '../types/issueReport';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
@@ -30,9 +30,11 @@ import { format } from 'date-fns';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogTrigger,
 } from '../components/ui/dialog';
 import {
   Select,
@@ -43,11 +45,19 @@ import {
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { Input } from '../components/ui/input';
+import { Role } from '../config/permissions';
+
+type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
+
+interface NewReport {
+  issue: string;
+  priority: Priority;
+  description: string;
+}
 
 const sidebar = (
   <nav className="flex flex-col space-y-1 p-4">
     {[
-      { name: 'Overview', icon: BarChart3, path: '/lab/dashboard' },
       { name: 'Equipment', icon: Beaker, path: '/lab/equipment' },
       { name: 'Maintenance', icon: Wrench, path: '/lab/maintenance' },
       { name: 'Reports', icon: FileText, path: '/lab/reports' },
@@ -66,40 +76,51 @@ const sidebar = (
 );
 
 const LabTechDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [maintenanceReports, setMaintenanceReports] = useState<MaintenanceReport[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [issueReports, setIssueReports] = useState<IssueReport[]>([]);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
-  const [newReport, setNewReport] = useState({
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [newReport, setNewReport] = useState<NewReport>({
     issue: '',
     priority: 'Medium',
     description: ''
   });
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [equipmentUpdate, setEquipmentUpdate] = useState({
     status: '',
     notes: ''
   });
 
   useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    } else if (user.role !== Role.LAB_TECHNICIAN) {
+      navigate('/unauthorized');
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const [equipmentData, workOrdersData, reportsData] = await Promise.all([
+        const [equipmentData, workOrdersData, reportsData, issuesData] = await Promise.all([
           equipmentApi.getAll(),
           workOrdersApi.getAll(),
           maintenanceApi.getAll({}),
+          issueReportsApi.getAll()
         ]);
 
         setEquipment(equipmentData);
         setWorkOrders(workOrdersData);
         setMaintenanceReports(reportsData);
+        setIssueReports(issuesData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
         console.error('Error fetching dashboard data:', err);
@@ -115,7 +136,7 @@ const LabTechDashboard: React.FC = () => {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'report-issue':
-        navigate('/lab/maintenance/new');
+        setReportDialogOpen(true);
         break;
       case 'view-equipment':
         navigate('/lab/equipment');
@@ -126,25 +147,62 @@ const LabTechDashboard: React.FC = () => {
   };
 
   const handleReportIssue = async () => {
-    if (!selectedEquipment) return;
+    if (!selectedEquipment) {
+      toast.error('Please select equipment first');
+      return;
+    }
+
+    if (!newReport.issue.trim()) {
+      toast.error('Please provide an issue description');
+      return;
+    }
 
     try {
-      const workOrder = await workOrdersApi.create({
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      console.log('Submitting issue report:', {
         equipmentId: selectedEquipment.id,
         issue: newReport.issue,
         priority: newReport.priority,
-        description: newReport.description,
-        status: 'Open',
-        type: 'Issue Report'
-      }) as WorkOrder;
+        description: newReport.description
+      });
 
-      setWorkOrders(prev => [...prev, workOrder]);
-      toast.success('Issue reported successfully');
+      const response = await fetch('http://localhost:3002/api/issue-reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          equipmentId: selectedEquipment.id,
+          issue: newReport.issue,
+          priority: newReport.priority,
+          description: newReport.description
+        })
+      });
+
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create issue report');
+      }
+
+      setIssueReports((prev) => [...prev, data]);
+      toast.success('Issue reported successfully. A biomedical engineer will review your report.');
       setReportDialogOpen(false);
       setNewReport({ issue: '', priority: 'Medium', description: '' });
+      setSelectedEquipment(null);
     } catch (error) {
       console.error('Error reporting issue:', error);
-      toast.error('Failed to report issue');
+      toast.error(error instanceof Error ? error.message : 'Failed to report issue');
     }
   };
 
@@ -183,6 +241,10 @@ const LabTechDashboard: React.FC = () => {
     }
   };
 
+  if (!user || user.role !== Role.LAB_TECHNICIAN) {
+    return null;
+  }
+
   return (
     <SharedLayout title="Laboratory Technician Dashboard" sidebar={sidebar}>
       {isLoading ? (
@@ -219,52 +281,7 @@ const LabTechDashboard: React.FC = () => {
           <p className="text-sm text-gray-600">
             Welcome, {user?.username || 'Lab Technician'}
           </p>
-          <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                {
-                  label: 'Equipment Status',
-                  value: `${Math.round(
-                    (equipment.filter((e) => e.status === 'Operational').length / equipment.length) * 100,
-                  )}%`,
-                  icon: Beaker,
-                  color: 'text-green-600',
-                },
-                {
-                  label: 'Active Work Orders',
-                  value: workOrders.filter((wo) => wo.status !== 'Completed' && wo.status !== 'Cancelled').length,
-                  icon: Wrench,
-                  color: 'text-blue-600',
-                },
-                {
-                  label: 'Pending Reports',
-                  value: maintenanceReports.filter((report) => report.status === 'Scheduled').length,
-                  icon: FileText,
-                  color: 'text-yellow-600',
-                },
-                {
-                  label: 'My Open Issues',
-                  value: workOrders.filter(
-                    (wo) =>
-                      wo.reportedBy.username === user?.username &&
-                      wo.status !== 'Completed' &&
-                      wo.status !== 'Cancelled',
-                  ).length,
-                  icon: AlertTriangle,
-                  color: 'text-purple-600',
-                },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-700">{stat.label}</h3>
-                    <stat.icon className={`h-8 w-8 ${stat.color}`} />
-                  </div>
-                  <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+
           <section>
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -273,7 +290,7 @@ const LabTechDashboard: React.FC = () => {
                   label: 'Report Equipment Issue',
                   icon: Plus,
                   action: 'report-issue',
-                  description: 'Create a new maintenance request',
+                  description: 'Report an equipment issue for review',
                   bgColor: 'bg-blue-100',
                   textColor: 'text-blue-600',
                 },
@@ -304,6 +321,7 @@ const LabTechDashboard: React.FC = () => {
               ))}
             </div>
           </section>
+
           <section>
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
               <div className="flex justify-between items-center mb-6">
@@ -332,6 +350,7 @@ const LabTechDashboard: React.FC = () => {
               </div>
             </div>
           </section>
+
           <section>
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
               <div className="flex justify-between items-center mb-6">
@@ -367,59 +386,138 @@ const LabTechDashboard: React.FC = () => {
               </div>
             </div>
           </section>
+
+          <section>
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">My Issue Reports</h2>
+                <Link to="/lab/issues" className="text-blue-600 hover:underline text-sm">
+                  View All
+                </Link>
+              </div>
+              <div className="space-y-4">
+                {issueReports
+                  .filter(report => report.reportedById === user?.id)
+                  .slice(0, 5)
+                  .map((report) => (
+                    <div
+                      key={report.id}
+                      className="p-4 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-medium">{report.issue}</h3>
+                          <p className="text-sm text-gray-500">Equipment: {report.equipment.name}</p>
+                          <p className="text-sm text-gray-500">Status: {report.status}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-sm ${
+                          report.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                          report.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                          report.status === 'Under Review' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {report.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </section>
         </motion.div>
       )}
 
       {/* Report Issue Dialog */}
-      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Report Equipment Issue</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Issue Type</label>
-              <Input
-                value={newReport.issue}
-                onChange={(e) => setNewReport(prev => ({ ...prev, issue: e.target.value }))}
-                placeholder="Describe the issue"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Priority</label>
-              <Select
-                value={newReport.priority}
-                onValueChange={(value) => setNewReport(prev => ({ ...prev, priority: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Description</label>
-              <Textarea
-                value={newReport.description}
-                onChange={(e) => setNewReport(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Provide detailed description of the issue"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReportIssue}>
-              Submit Report
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <div className="flex items-center">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>Report Equipment Issue</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Report Equipment Issue</DialogTitle>
+              <DialogDescription>
+                Fill out the form below to report an equipment issue. A biomedical engineer will review your report.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleReportIssue();
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Select Equipment</label>
+                  <Select
+                    value={selectedEquipment?.id}
+                    onValueChange={(value) => {
+                      const selectedEq = equipment.find((eq) => eq.id === value);
+                      setSelectedEquipment(selectedEq || null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select equipment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {equipment.map((eq) => (
+                        <SelectItem key={eq.id} value={eq.id}>
+                          {eq.name} - {eq.location}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Issue</label>
+                  <Input
+                    value={newReport.issue}
+                    onChange={(e) => setNewReport(prev => ({ ...prev, issue: e.target.value }))}
+                    placeholder="Brief description of the issue"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Priority</label>
+                  <Select
+                    value={newReport.priority}
+                    onValueChange={(value) => setNewReport(prev => ({ ...prev, priority: value as Priority }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    value={newReport.description}
+                    onChange={(e) => setNewReport(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Detailed description of the issue"
+                    rows={4}
+                    required
+                  />
+                </div>
+              </div>
+              <DialogFooter className="mt-6">
+                <Button variant="outline" type="button" onClick={() => setReportDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Submit Report
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Update Status Dialog */}
       <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>

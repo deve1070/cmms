@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, checkRole } from '../middleware/auth';
+import { authenticateToken, authorizeRole } from '../middleware/auth';
 import { Role } from '../config/permissions';
 
 const router = Router();
@@ -117,7 +117,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete maintenance record
-router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.maintenanceHistory.delete({

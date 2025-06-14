@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LoginCredentials, mapToFrontendRole } from '../types/auth';
+import { 
+  User, 
+  LoginCredentials, 
+  FrontendUserRole, 
+  BackendUserRole,
+  mapToFrontendRole,
+  mapToBackendRole 
+} from '../types/auth';
 
 const API_URL = 'http://localhost:3002';
 
@@ -28,6 +35,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const handleAuthError = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
+    navigate('/login');
+  }, [navigate]);
+
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     const token = localStorage.getItem('token');
     const headers = {
@@ -36,17 +51,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...options.headers,
     };
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers,
-      credentials: 'include',
-    });
+    try {
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers,
+        credentials: 'include',
+      });
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        throw new Error('Authentication required');
+      }
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Authentication required') {
+        throw error;
+      }
+      console.error('API request error:', error);
+      throw new Error('Failed to make API request');
     }
-
-    return response.json();
   };
 
   const checkAuth = useCallback(async () => {
@@ -68,14 +96,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (err) {
       console.error('Auth check error:', err);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      setIsAuthenticated(false);
+      handleAuthError();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [handleAuthError]);
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {
@@ -88,13 +113,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const mappedUser = {
         ...response.user,
-        role: response.user.role
+        role: mapToFrontendRole(response.user.role as BackendUserRole)
       };
       console.log('Mapped user data:', mappedUser);
 
       setUser(mappedUser);
       localStorage.setItem('user', JSON.stringify(mappedUser));
       localStorage.setItem('token', response.token);
+
+      // Role-based redirection
+      switch (mappedUser.role) {
+        case 'admin':
+          navigate('/admin');
+          break;
+        case 'biomedical engineer':
+          navigate('/biomed');
+          break;
+        case 'laboratory technician':
+          navigate('/lab-tech');
+          break;
+        case 'maintenance technician':
+          navigate('/maintenance');
+          break;
+        default:
+          navigate('/unauthorized');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;

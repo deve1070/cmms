@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, checkRole } from '../middleware/auth';
+import { authenticateToken, authorizeRole } from '../middleware/auth';
 import { Role } from '../config/permissions';
 
 const router = Router();
@@ -17,7 +17,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Create new spare part
-router.post('/', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
+router.post('/', authenticateToken, authorizeRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const {
       name,
@@ -73,7 +73,7 @@ router.post('/', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGIN
 });
 
 // Update spare part
-router.put('/:id', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER, Role.MAINTENANCE_TECHNICIAN]), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER, Role.MAINTENANCE_TECHNICIAN]), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -163,7 +163,7 @@ router.put('/:id', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENG
 });
 
 // Delete spare part
-router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.sparePart.delete({

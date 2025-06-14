@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, checkRole, AuthRequest } from '../middleware/auth'; // Combined AuthRequest
+import { authenticateToken, authorizeRole, AuthRequest } from '../middleware/auth'; // Combined AuthRequest
 import { Role } from '../config/permissions'; // Added Role import
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Get performance reports
-router.get('/performance', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
+router.get('/performance', authenticateToken, authorizeRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const { startDate, endDate, equipmentId } = req.query;
     const reports = await prisma.report.findMany({
@@ -26,7 +26,7 @@ router.get('/performance', authenticateToken, checkRole([Role.ADMIN, Role.BIOMED
 });
 
 // Get financial reports
-router.get('/financial', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
+router.get('/financial', authenticateToken, authorizeRole([Role.ADMIN]), async (req, res) => {
   try {
     const { year, month, category } = req.query;
     const reports = await prisma.report.findMany({
@@ -43,7 +43,7 @@ router.get('/financial', authenticateToken, checkRole([Role.ADMIN]), async (req,
 });
 
 // Get compliance reports
-router.get('/compliance', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
+router.get('/compliance', authenticateToken, authorizeRole([Role.ADMIN, Role.BIOMEDICAL_ENGINEER]), async (req, res) => {
   try {
     const { standard, status } = req.query;
     const reports = await prisma.report.findMany({
@@ -60,7 +60,7 @@ router.get('/compliance', authenticateToken, checkRole([Role.ADMIN, Role.BIOMEDI
 });
 
 // Generate new report
-router.post('/', authenticateToken, checkRole([Role.ADMIN]), async (req: AuthRequest, res) => {
+router.post('/', authenticateToken, authorizeRole([Role.ADMIN]), async (req: AuthRequest, res) => {
   try {
     const { type, title, content, period, metrics } = req.body;
 
@@ -90,7 +90,7 @@ router.post('/', authenticateToken, checkRole([Role.ADMIN]), async (req: AuthReq
 });
 
 // Delete report
-router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.report.delete({

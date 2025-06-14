@@ -32,6 +32,7 @@ model Equipment {
   compliance              Compliance[]
   spareParts              SparePart[]
   maintenanceReports      MaintenanceReport[]
+  issueReports            IssueReport[]
 }
 
 model SparePart {
@@ -49,6 +50,7 @@ model SparePart {
   leadTime    Int    // in days
   equipment   Equipment @relation(fields: [equipmentId], references: [id])
   equipmentId String
+  usages      PartUsage[]
 }
 
 model WorkOrder {
@@ -78,6 +80,7 @@ model WorkOrder {
   cost                Float?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  partUsages          PartUsage[]
 }
 
 model Contract {
@@ -143,12 +146,16 @@ model User {
   password              String
   department            String?
   permissions           String   // JSON string of specific permissions
+  status                String   @default("active") // "active" or "inactive"
   lastLogin             String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   reportedWorkOrders    WorkOrder[] @relation("ReportedWorkOrders")
   assignedWorkOrders    WorkOrder[] @relation("AssignedWorkOrders")
   maintenanceReports    MaintenanceReport[]
+  reportedIssues        IssueReport[] @relation("ReportedIssues")
+  reviewedIssues        IssueReport[] @relation("ReviewedIssues")
+  activityLogs          ActivityLog[]
 }
 
 model MaintenanceReport {
@@ -168,4 +175,42 @@ model MaintenanceReport {
   nextDueDate   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model IssueReport {
+  id            String   @id @default(uuid())
+  equipmentId   String
+  equipment     Equipment @relation(fields: [equipmentId], references: [id])
+  issue         String
+  priority      String   @default("Medium") // "Low", "Medium", "High", "Critical"
+  description   String
+  status        String   @default("Pending") // "Pending", "Under Review", "Approved", "Rejected"
+  reportedById  String
+  reportedBy    User     @relation("ReportedIssues", fields: [reportedById], references: [id])
+  reviewedById  String?
+  reviewedBy    User?    @relation("ReviewedIssues", fields: [reviewedById], references: [id])
+  reviewNotes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PartUsage {
+  id          String   @id @default(uuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  partId      String
+  part        SparePart @relation(fields: [partId], references: [id])
+  quantity    Int
+  usedAt      DateTime @default(now())
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String   // e.g., "WorkOrder", "PartUsage", "EquipmentUpdate"
+  description String
+  timestamp   DateTime @default(now())
+  workOrderId String?
+  equipmentId String?
 }

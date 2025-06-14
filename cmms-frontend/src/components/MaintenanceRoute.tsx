@@ -1,35 +1,20 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import MaintenanceLayout from './MaintenanceLayout';
-import { FrontendUserRole } from '../types/auth';
+import { Role } from '../config/permissions';
 
-interface MaintenanceRouteProps {
-  children: React.ReactNode;
-}
+const MaintenanceRoute: React.FC = () => {
+  const { user } = useAuth();
 
-const MaintenanceRoute: React.FC<MaintenanceRouteProps> = ({ children }) => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
+  if (!user || user.role !== Role.BIOMEDICAL_ENGINEER) {
+    return <div>Unauthorized</div>;
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Type-safe role checking
-  const allowedRoles: FrontendUserRole[] = ['engineer for maintenance'];
-  if (!allowedRoles.includes(user.role as FrontendUserRole)) {
-    return <Navigate to="/welcome" replace />;
-  }
-
-  return <MaintenanceLayout>{children}</MaintenanceLayout>;
+  return (
+    <div className="space-y-6">
+      <Outlet />
+    </div>
+  );
 };
 
 export default MaintenanceRoute;

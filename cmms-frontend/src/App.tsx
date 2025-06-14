@@ -1,240 +1,173 @@
-import React, { Component, ReactNode } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { useAuth } from './contexts/AuthContext';
-import BiomedicalLayout from './components/BiomedicalLayout';
-import MaintenanceRoute from './components/MaintenanceRoute';
+import { AuthProvider } from './contexts/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Role } from './config/permissions';
+import MaintenanceTechRoute from './components/MaintenanceTechRoute';
 
 // Public pages
 import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import Unauthorized from './pages/Unauthorized';
 
-// Biomedical pages
-import BiomedicalEngineerDashboard from './pages/BiomedicalEngineerDashboard';
+// Admin pages
+import AdminDashboard from './pages/AdminDashboard';
+import AdminLayout from './components/AdminLayout';
+import Users from './pages/Users';
+import CreateUser from './pages/CreateUser';
 import Equipment from './pages/Equipment';
-import AddEquipment from './pages/AddEquipment';
-import WorkOrders from './pages/WorkOrders';
-import NewWorkOrder from './pages/NewWorkOrder';
-import MaintenanceScheduleView from './pages/MaintenanceScheduleView';
-import SpareParts from './pages/SpareParts';
+import MaintenanceSchedule from './pages/MaintenanceSchedule';
 import MaintenanceReports from './pages/MaintenanceReports';
 import MaintenanceTechDashboard from './pages/MaintenanceTechDashboard';
 import LabTechDashboard from './pages/LabTechDashboard';
+import ActivityLog from './pages/ActivityLog';
+
+// Biomedical pages
+import BiomedicalLayout from './components/BiomedicalLayout';
+import MaintenanceRoute from './components/MaintenanceRoute';
+import BiomedicalDashboard from './pages/BiomedicalDashboard';
+import MaintenanceRequests from './pages/MaintenanceRequests';
+import MaintenanceHistory from './pages/MaintenanceHistory';
+import SpareParts from './pages/SpareParts';
+import Budgets from './pages/Budgets';
+import Compliance from './pages/Compliance';
+import ReportMaintenance from './pages/ReportMaintenance';
 
 // Error Boundary Component
-interface ErrorBoundaryState {
-  hasError: boolean;
-}
-
-class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
-
-  static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true };
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600">Something went wrong</h1>
-            <p>Please refresh the page or try again later.</p>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-// Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({
-  children,
-  allowedRoles,
-}) => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+const ErrorFallback = ({ error }: { error: Error }) => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
+        <p className="text-gray-600 mb-4">{error.message}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Reload page
+        </button>
       </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return <>{children}</>;
+    </div>
+  );
 };
 
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <Toaster position="top-right" />
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<Welcome />} />
-        <Route path="/welcome" element={<Welcome />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
+      <AuthProvider>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Welcome />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* Admin routes */}
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <BiomedicalLayout>
-                <BiomedicalEngineerDashboard />
-              </BiomedicalLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Admin routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<Users />} />
+            <Route path="users/new" element={<CreateUser />} />
+            <Route path="equipment" element={<Equipment />} />
+            <Route path="maintenance-schedule" element={<MaintenanceSchedule />} />
+            <Route path="maintenance-reports" element={<MaintenanceReports />} />
+            <Route path="activity-log" element={<ActivityLog />} />
+          </Route>
 
-        {/* Biomedical routes */}
-        <Route
-          path="/biomedical/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['biomedical engineer']}>
-              <BiomedicalLayout>
-                <BiomedicalEngineerDashboard />
-              </BiomedicalLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/biomedical/equipment"
-          element={
-            <ProtectedRoute allowedRoles={['biomedical engineer']}>
-              <BiomedicalLayout>
-                <Equipment />
-              </BiomedicalLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/biomedical/equipment/add"
-          element={
-            <ProtectedRoute allowedRoles={['biomedical engineer']}>
-              <BiomedicalLayout>
-                <AddEquipment />
-              </BiomedicalLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/biomedical/work-orders"
-          element={
-            <ProtectedRoute allowedRoles={['biomedical engineer']}>
-              <BiomedicalLayout>
-                <WorkOrders />
-              </BiomedicalLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/biomedical/work-orders/new"
-          element={
-            <ProtectedRoute allowedRoles={['biomedical engineer']}>
-              <BiomedicalLayout>
-                <NewWorkOrder />
-              </BiomedicalLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/biomedical/reports"
-          element={
-            <ProtectedRoute allowedRoles={['biomedical engineer']}>
-              <BiomedicalLayout>
-                <MaintenanceReports />
-              </BiomedicalLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Biomedical routes */}
+          <Route path="/biomed" element={<BiomedicalLayout />}>
+            <Route index element={<BiomedicalDashboard />} />
+            <Route path="maintenance" element={<MaintenanceRoute />}>
+              <Route index element={<MaintenanceRequests />} />
+              <Route path="history" element={<MaintenanceHistory />} />
+            </Route>
+            <Route path="spare-parts" element={<SpareParts />} />
+            <Route path="budgets" element={<Budgets />} />
+            <Route path="compliance" element={<Compliance />} />
+            <Route path="activity-log" element={<ActivityLog />} />
+          </Route>
 
-        {/* Maintenance routes */}
-        <Route
-          path="/maintenance"
-          element={
-            <ProtectedRoute allowedRoles={['engineer for maintenance']}>
-              <MaintenanceRoute>
+          {/* Lab Technician routes */}
+          <Route path="/lab-tech" element={<LabTechDashboard />} />
+          <Route path="/lab-tech/activity-log" element={<ActivityLog />} />
+
+          {/* Maintenance Technician routes */}
+          <Route
+            path="/maintenance"
+            element={
+              <MaintenanceTechRoute>
                 <MaintenanceTechDashboard />
-              </MaintenanceRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/maintenance/work-orders"
-          element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer', 'engineer for maintenance']}>
-              <MaintenanceRoute>
-                <WorkOrders />
-              </MaintenanceRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/maintenance/work-orders/new"
-          element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer', 'engineer for maintenance']}>
-              <MaintenanceRoute>
-                <NewWorkOrder />
-              </MaintenanceRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/maintenance/schedule"
-          element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
-              <MaintenanceRoute>
-                <MaintenanceScheduleView />
-              </MaintenanceRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/maintenance/spare-parts"
-          element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
-              <MaintenanceRoute>
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/dashboard"
+            element={
+              <MaintenanceTechRoute>
+                <MaintenanceTechDashboard />
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/report"
+            element={
+              <MaintenanceTechRoute>
+                <ReportMaintenance />
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/work-orders"
+            element={
+              <MaintenanceTechRoute>
+                <MaintenanceRequests />
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/work-orders/:id"
+            element={
+              <MaintenanceTechRoute>
+                <MaintenanceRequests />
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/schedule"
+            element={
+              <MaintenanceTechRoute>
+                <MaintenanceSchedule />
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/schedule/:id"
+            element={
+              <MaintenanceTechRoute>
+                <MaintenanceSchedule />
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/spare-parts"
+            element={
+              <MaintenanceTechRoute>
                 <SpareParts />
-              </MaintenanceRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/maintenance/reports"
-          element={
-            <ProtectedRoute allowedRoles={['maintenance', 'engineer']}>
-              <MaintenanceRoute>
-                <MaintenanceReports />
-              </MaintenanceRoute>
-            </ProtectedRoute>
-          }
-        />
+              </MaintenanceTechRoute>
+            }
+          />
+          <Route
+            path="/maintenance/activity-log"
+            element={
+              <MaintenanceTechRoute>
+                <ActivityLog />
+              </MaintenanceTechRoute>
+            }
+          />
 
-        {/* Lab routes */}
-        <Route
-          path="/lab/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['laboratory technician']}>
-              <LabTechDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Catch-all route */}
-        <Route path="*" element={<Navigate to="/welcome" replace />} />
-      </Routes>
+          {/* Catch-all route */}
+          <Route path="*" element={<Navigate to="/welcome" replace />} />
+        </Routes>
+        <Toaster position="top-right" />
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

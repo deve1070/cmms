@@ -54,14 +54,17 @@ const ReportMaintenance: React.FC = () => {
         throw new Error('Selected equipment not found');
       }
 
-      // Create maintenance history record
+      // Create maintenance report
       await maintenanceApi.create({
         equipmentId: formData.equipmentId,
         type: formData.maintenanceType,
         description: formData.description,
-        performedBy: user?.username || 'Unknown',
         date: formData.maintenanceDate,
-        partsUsed: formData.issuesEncountered
+        partsUsed: formData.issuesEncountered,
+        findings: formData.issuesEncountered,
+        recommendations: formData.issuesEncountered,
+        nextDueDate: formData.nextMaintenanceDate,
+        status: 'Completed'
       });
 
       // Update equipment status

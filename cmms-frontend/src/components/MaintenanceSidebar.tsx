@@ -15,11 +15,11 @@ const MaintenanceSidebar: React.FC = () => {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { name: 'Dashboard', icon: BarChart3, path: '/engineer/dashboard' },
-    { name: 'My Work Orders', icon: Wrench, path: '/engineer/work-orders' },
-    { name: 'View Schedule', icon: Calendar, path: '/engineer/schedule' },
-    { name: 'Spare Parts Inventory', icon: Package2, path: '/engineer/spare-parts' },
-    { name: 'My Activity Log', icon: ClipboardCheck, path: '/engineer/activity-log' },
+    { name: 'Dashboard', icon: BarChart3, path: '/maintenance/dashboard' },
+    { name: 'My Work Orders', icon: Wrench, path: '/maintenance/work-orders' },
+    { name: 'View Schedule', icon: Calendar, path: '/maintenance/schedule' },
+    { name: 'Spare Parts Inventory', icon: Package2, path: '/maintenance/spare-parts' },
+    { name: 'My Activity Log', icon: ClipboardCheck, path: '/maintenance/activity-log' },
   ];
 
   return (

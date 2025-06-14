@@ -7,8 +7,9 @@ import { Equipment } from '../types/equipment';
 import { WorkOrder } from '../types/workOrder';
 import { MaintenanceReport } from '../types/maintenance';
 import { SparePart } from '../types/sparePart';
+import { IssueReport } from '../types/issueReport';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -42,9 +43,21 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 403 || error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Only redirect if we're not already on the login page
+      if (!window.location.pathname.includes('/login')) {
+        // Clear auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Only redirect if this is not a retry
+        if (!error.config._retry) {
+          error.config._retry = true;
+          // Use a more graceful redirect
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
+        }
+      }
     }
     return Promise.reject(error);
   }
@@ -112,7 +125,10 @@ export const workOrdersApi = {
       quantity
     });
     return response.data;
-  }
+  },
+  getUserActivities: () => {
+    return api.get('/work-orders/activities');
+  },
 };
 
 // Reports API
@@ -182,39 +198,29 @@ export const maintenanceApi = {
         recommendations: report.recommendations || '',
         equipment: {
           id: report.equipmentId,
-          name: report.equipment?.name || 'Unknown',
-          model: report.equipment?.model || 'Unknown',
-          serialNumber: report.equipment?.serialNumber || 'Unknown',
-          location: report.equipment?.location || 'Unknown'
+          name: report.equipment?.name || 'Unknown Equipment',
+          serialNumber: report.equipment?.serialNumber || 'N/A'
         }
       }));
     } catch (error) {
-      console.error('Error in maintenanceApi.getAll:', error);
+      console.error('Error fetching maintenance history:', error);
       throw error;
     }
   },
-  getById: async (id: string) => {
-    const response = await api.get(`/maintenance/${id}`);
+  getById: async (id: string): Promise<MaintenanceReport> => {
+    const response = await api.get<MaintenanceReport>(`/maintenance/${id}`);
     return response.data;
   },
-  create: async (data: any) => {
-    const response = await api.post('/maintenance', data);
+  create: async (data: any): Promise<MaintenanceReport> => {
+    const response = await api.post<MaintenanceReport>('/maintenance', data);
     return response.data;
   },
-  update: async (id: string, data: any) => {
-    const response = await api.put(`/maintenance/${id}`, data);
+  update: async (id: string, data: any): Promise<MaintenanceReport> => {
+    const response = await api.put<MaintenanceReport>(`/maintenance/${id}`, data);
     return response.data;
   },
-  delete: async (id: string) => {
-    const response = await api.delete(`/maintenance/${id}`);
-    return response.data;
-  },
-  exportReports: async (params: { timeRange: string }): Promise<Blob> => {
-    const response = await api.get('/maintenance/export', {
-      params,
-      responseType: 'blob'
-    });
-    return response.data as Blob;
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/maintenance/${id}`);
   }
 };
 
@@ -248,6 +254,29 @@ export const sparePartsApi = {
     leadTime?: number;
   }) => api.put(`/spare-parts/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/spare-parts/${id}`).then(res => res.data)
+};
+
+// Issue Reports API
+export const issueReportsApi = {
+  getAll: async (): Promise<IssueReport[]> => {
+    const response = await api.get<IssueReport[]>('/issue-reports');
+    return response.data;
+  },
+  getById: async (id: string): Promise<IssueReport> => {
+    const response = await api.get<IssueReport>(`/issue-reports/${id}`);
+    return response.data;
+  },
+  create: async (data: Omit<IssueReport, 'id' | 'createdAt' | 'updatedAt' | 'reportedBy'>): Promise<IssueReport> => {
+    const response = await api.post<IssueReport>('/issue-reports', data);
+    return response.data;
+  },
+  update: async (id: string, data: Partial<IssueReport>): Promise<IssueReport> => {
+    const response = await api.put<IssueReport>(`/issue-reports/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/issue-reports/${id}`);
+  }
 };
 
 export default api;
