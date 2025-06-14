@@ -198,17 +198,17 @@ const AdminDashboard: React.FC = () => {
       }
     };
 
-    fetchDashboardData();
+      fetchDashboardData();
   }, []);
 
   const handleQuickAction = (action: string) => {
-    switch (action) {
-      case 'add-user':
-        navigate('/admin/users/new');
-        break;
-      case 'add-equipment':
-        navigate('/admin/equipment/new');
-        break;
+      switch (action) {
+        case 'add-user':
+          navigate('/admin/users/new');
+          break;
+        case 'add-equipment':
+          navigate('/admin/equipment/new');
+          break;
       case 'create-work-order':
         navigate('/admin/work-orders/new');
         break;
@@ -220,9 +220,9 @@ const AdminDashboard: React.FC = () => {
         break;
       case 'manage-contracts':
         navigate('/admin/contracts');
-        break;
+          break;
       default:
-        break;
+          break;
     }
   };
 
@@ -378,25 +378,25 @@ const AdminDashboard: React.FC = () => {
             <PlusIcon className="h-8 w-8 text-gray-500" />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => handleQuickAction('add-user')}
-              className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center justify-center space-x-2 text-blue-600"
-            >
+              <button
+                onClick={() => handleQuickAction('add-user')}
+                className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center justify-center space-x-2 text-blue-600"
+              >
               <UsersIcon className="h-6 w-6" />
-              <span>Add User</span>
-            </button>
-            <button
-              onClick={() => handleQuickAction('add-equipment')}
-              className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center justify-center space-x-2 text-green-600"
-            >
-              <CubeIcon className="h-6 w-6" />
-              <span>Add Equipment</span>
-            </button>
-            <button
+                <span>Add User</span>
+              </button>
+              <button
+                onClick={() => handleQuickAction('add-equipment')}
+                className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center justify-center space-x-2 text-green-600"
+              >
+                <CubeIcon className="h-6 w-6" />
+                <span>Add Equipment</span>
+              </button>
+              <button
               onClick={() => handleQuickAction('create-work-order')}
-              className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center justify-center space-x-2 text-yellow-600"
-            >
-              <WrenchIcon className="h-6 w-6" />
+                className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center justify-center space-x-2 text-yellow-600"
+              >
+                <WrenchIcon className="h-6 w-6" />
               <span>Create Work Order</span>
             </button>
             <button
@@ -412,23 +412,23 @@ const AdminDashboard: React.FC = () => {
             >
               <ShieldCheckIcon className="h-6 w-6" />
               <span>Manage Compliance</span>
-            </button>
-            <button
+              </button>
+              <button
               onClick={() => handleQuickAction('manage-contracts')}
               className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow flex items-center justify-center space-x-2 text-blue-600"
-            >
+              >
               <DocumentIcon className="h-6 w-6" />
               <span>Manage Contracts</span>
-            </button>
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+              </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-700">Recent Activities</h3>
           <DocumentTextIcon className="h-8 w-8 text-gray-500" />
-        </div>
+              </div>
         <div className="space-y-4">
           {recentActivities.map((activity) => (
             <div
@@ -445,7 +445,7 @@ const AdminDashboard: React.FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">{activity.title}</p>
                   <p className="text-sm text-gray-500">{activity.description}</p>
-                </div>
+            </div>
               </div>
               <div className="flex items-center space-x-2">
                 {activity.status && (
@@ -464,8 +464,8 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-      </div>
+            </div>
+          </div>
     </div>
   );
 };
