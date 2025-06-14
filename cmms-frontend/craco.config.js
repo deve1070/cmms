@@ -8,6 +8,15 @@ module.exports = {
     },
   },
   devServer: {
-    port: 3002
+    port: 3004,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/api': '/api'
+        }
+      }
+    }
   }
 } 

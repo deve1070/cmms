@@ -15,6 +15,7 @@ import maintenanceRouter from './routes/maintenance';
 import reportsRouter from './routes/reports';
 import budgetsRouter from './routes/budgets';
 import complianceRouter from './routes/compliance';
+import contractsRouter from './routes/contracts';
 import issueReportsRouter from './routes/issueReports';
 
 const app = express();
@@ -206,8 +207,12 @@ app.post('/api/auth/login', async (req, res) => {
 // Enhanced auth check endpoint
 app.get('/api/auth/check', authenticateToken, async (req: AuthRequest, res) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'User not authenticated' });
+    return res.status(401).json({ 
+      error: 'User not authenticated',
+      code: 'NOT_AUTHENTICATED'
+    });
   }
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -218,6 +223,7 @@ app.get('/api/auth/check', authenticateToken, async (req: AuthRequest, res) => {
         role: true,
         department: true,
         permissions: true,
+        status: true,
         lastLogin: true,
         createdAt: true,
         updatedAt: true
@@ -231,20 +237,28 @@ app.get('/api/auth/check', authenticateToken, async (req: AuthRequest, res) => {
       });
     }
 
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: mapToFrontendRole(user.role as BackendUserRole),
-        department: user.department || undefined,
-        permissions: JSON.parse(user.permissions),
-        status: 'active',
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString()
-      }
-    });
+    if (user.status !== 'active') {
+      return res.status(401).json({
+        error: 'User account is inactive',
+        code: 'USER_INACTIVE'
+      });
+    }
+
+    // Map the user data to include parsed permissions and proper date formatting
+    const mappedUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: mapToFrontendRole(user.role as BackendUserRole),
+      department: user.department || undefined,
+      permissions: JSON.parse(user.permissions || '[]'),
+      status: user.status,
+      lastLogin: user.lastLogin ? new Date(user.lastLogin).toISOString() : null,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString()
+    };
+
+    res.json({ user: mappedUser });
   } catch (error) {
     console.error('Auth check error:', error);
     res.status(500).json({ 
@@ -599,6 +613,7 @@ app.use('/api/maintenance', maintenanceRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/budgets', budgetsRouter);
 app.use('/api/compliance', complianceRouter);
+app.use('/api/contracts', contractsRouter);
 app.use('/api/issue-reports', issueReportsRouter);
 
 // Error handling middleware

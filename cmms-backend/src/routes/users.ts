@@ -234,11 +234,25 @@ router.get(
           username: true,
           email: true,
           role: true,
+          department: true,
+          permissions: true,
+          status: true,
+          lastLogin: true,
           createdAt: true,
           updatedAt: true
         }
       });
-      res.json(users);
+
+      // Map the users to include parsed permissions and proper date formatting
+      const mappedUsers = users.map(user => ({
+        ...user,
+        permissions: JSON.parse(user.permissions || '[]'),
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin).toISOString() : null
+      }));
+
+      res.json(mappedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       res.status(500).json({

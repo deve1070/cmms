@@ -20,7 +20,9 @@ const defaultHeader = (user: { username?: string; role?: string } | null, userDi
         src="/logo192.png"
         alt="CMMS Logo"
         className="h-8 w-8 rounded-full border border-blue-200"
-        onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/40?text=CMMS')}
+        onError={(e) => {
+          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDA3MGZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTQgNCAwIDAgMC00LTRINGE0IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==';
+        }}
       />
       <span className="text-xl font-semibold text-white tracking-tight">CMMS</span>
     </div>

@@ -9,7 +9,7 @@ import { MaintenanceReport } from '../types/maintenance';
 import { SparePart } from '../types/sparePart';
 import { IssueReport } from '../types/issueReport';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002';
+const API_URL = '/api'; // Use relative URL to work with proxy
 
 const api = axios.create({
   baseURL: API_URL,

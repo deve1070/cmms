@@ -10,6 +10,8 @@ import {
   ClipboardList,
   FileText,
   Activity,
+  DollarSign,
+  ShieldCheck,
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -26,6 +28,8 @@ const AdminLayout: React.FC = () => {
     { name: 'Equipment', href: '/admin/equipment', icon: Wrench },
     { name: 'Maintenance Schedule', href: '/admin/maintenance-schedule', icon: ClipboardList },
     { name: 'Maintenance Reports', href: '/admin/maintenance-reports', icon: FileText },
+    { name: 'Budgets', href: '/admin/budgets', icon: DollarSign },
+    { name: 'Compliance', href: '/admin/compliance', icon: ShieldCheck },
     { name: 'Activity Log', href: '/admin/activity-log', icon: Activity },
   ];
 

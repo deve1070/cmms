@@ -9,7 +9,7 @@ import {
   mapToBackendRole 
 } from '../types/auth';
 
-const API_URL = 'http://localhost:3002';
+const API_URL = '/api';
 
 interface LoginResponse {
   token: string;
@@ -85,7 +85,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      const data = await apiRequest('/api/auth/check');
+      const data = await apiRequest('/auth/check');
+      if (!data || !data.user) {
+        throw new Error('Invalid response from auth check');
+      }
+
       const userData: User = {
         ...data.user,
         role: mapToFrontendRole(data.user.role),
@@ -105,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {
       console.log('Making login request with credentials:', credentials);
-      const response = await apiRequest('/api/auth/login', {
+      const response = await apiRequest('/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials)
       }) as LoginResponse;
@@ -132,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         case 'laboratory technician':
           navigate('/lab-tech');
           break;
-        case 'maintenance technician':
+        case 'engineer for maintenance':
           navigate('/maintenance');
           break;
         default:

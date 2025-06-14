@@ -21,6 +21,9 @@ import MaintenanceReports from './pages/MaintenanceReports';
 import MaintenanceTechDashboard from './pages/MaintenanceTechDashboard';
 import LabTechDashboard from './pages/LabTechDashboard';
 import ActivityLog from './pages/ActivityLog';
+import Budgets from './pages/Budgets';
+import Compliance from './pages/Compliance';
+import ReportMaintenance from './pages/ReportMaintenance';
 
 // Biomedical pages
 import BiomedicalLayout from './components/BiomedicalLayout';
@@ -29,9 +32,6 @@ import BiomedicalDashboard from './pages/BiomedicalDashboard';
 import MaintenanceRequests from './pages/MaintenanceRequests';
 import MaintenanceHistory from './pages/MaintenanceHistory';
 import SpareParts from './pages/SpareParts';
-import Budgets from './pages/Budgets';
-import Compliance from './pages/Compliance';
-import ReportMaintenance from './pages/ReportMaintenance';
 
 // Error Boundary Component
 const ErrorFallback = ({ error }: { error: Error }) => {
@@ -69,6 +69,8 @@ const App: React.FC = () => {
             <Route path="equipment" element={<Equipment />} />
             <Route path="maintenance-schedule" element={<MaintenanceSchedule />} />
             <Route path="maintenance-reports" element={<MaintenanceReports />} />
+            <Route path="budgets" element={<Budgets />} />
+            <Route path="compliance" element={<Compliance />} />
             <Route path="activity-log" element={<ActivityLog />} />
           </Route>
 

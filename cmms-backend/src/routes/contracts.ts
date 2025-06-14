@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, checkRole } from '../middleware/auth';
+import { authenticateToken, authorizeRole } from '../middleware/auth';
 import { Role } from '../config/permissions';
 
 const router = Router();
@@ -14,14 +14,41 @@ router.get('/', authenticateToken, async (req, res) => {
         equipment: true
       }
     });
-    res.json(contracts);
+
+    // Transform the data to match the frontend's expected structure
+    const transformedContracts = contracts.map(contract => ({
+      id: contract.id,
+      title: `${contract.vendor} - ${contract.equipment.manufacturerName} ${contract.equipment.modelNumber}`,
+      type: 'preventive', // Default type
+      vendor: contract.vendor,
+      equipmentId: contract.equipmentId,
+      equipment: {
+        id: contract.equipment.id,
+        model: contract.equipment.modelNumber,
+        serialNumber: contract.equipment.serialNumber
+      },
+      startDate: contract.startDate,
+      endDate: contract.endDate,
+      details: contract.details,
+      status: contract.status.toLowerCase() as 'active' | 'expired' | 'pending' | 'cancelled',
+      value: 0, // Default value
+      renewalTerms: 'Annual', // Default value
+      paymentTerms: 'Net 30', // Default value
+      terms: contract.details,
+      contactPerson: 'N/A', // Default value
+      contactEmail: 'N/A', // Default value
+      contactPhone: 'N/A' // Default value
+    }));
+
+    res.json(transformedContracts);
   } catch (error) {
+    console.error('Error fetching contracts:', error);
     res.status(500).json({ error: 'Failed to fetch contracts' });
   }
 });
 
 // Create new contract
-router.post('/', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
+router.post('/', authenticateToken, authorizeRole([Role.ADMIN]), async (req, res) => {
   try {
     const { vendor, equipmentId, startDate, endDate, details } = req.body;
 
@@ -53,7 +80,7 @@ router.post('/', authenticateToken, checkRole([Role.ADMIN]), async (req, res) =>
 });
 
 // Update contract
-router.put('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     const { vendor, equipmentId, startDate, endDate, details, status } = req.body;
@@ -79,7 +106,7 @@ router.put('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) 
 });
 
 // Delete contract
-router.delete('/:id', authenticateToken, checkRole([Role.ADMIN]), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRole([Role.ADMIN]), async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.contract.delete({

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { complianceApi } from '../services/api';
+import { ComplianceRequirement } from '../types/compliance';
 import { toast } from 'react-hot-toast';
 import {
   ShieldCheck,
@@ -11,74 +12,62 @@ import {
   Plus,
   RefreshCw,
 } from 'lucide-react';
-
-interface ComplianceRequirement {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  status: 'compliant' | 'non-compliant' | 'pending' | 'expired';
-  dueDate: string;
-  lastChecked: string;
-  assignedTo: string;
-  priority: 'high' | 'medium' | 'low';
-}
+import AddComplianceForm from '../components/AddComplianceForm';
 
 const Compliance: React.FC = () => {
-  const [requirements, setRequirements] = useState<ComplianceRequirement[]>([]);
+  const [compliance, setCompliance] = useState<ComplianceRequirement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showAddForm, setShowAddForm] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchRequirements();
+    fetchCompliance();
   }, [selectedCategory]);
 
-  const fetchRequirements = async () => {
+  const fetchCompliance = async () => {
     try {
       const data = await complianceApi.getAll();
       const filteredData = selectedCategory === 'all'
         ? data
-        : (data as ComplianceRequirement[]).filter(
-            req => req.category === selectedCategory
-          );
-      setRequirements(filteredData);
+        : data.filter(item => item.category === selectedCategory);
+      setCompliance(filteredData);
     } catch (error) {
-      toast.error('Failed to fetch compliance requirements');
+      toast.error('Failed to fetch compliance records');
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: ComplianceRequirement['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'compliant':
-        return 'text-green-600 bg-green-100';
-      case 'non-compliant':
-        return 'text-red-600 bg-red-100';
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'expired':
-        return 'text-gray-600 bg-gray-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getPriorityColor = (priority: ComplianceRequirement['priority']) => {
-    switch (priority) {
-      case 'high':
-        return 'text-red-600';
-      case 'medium':
-        return 'text-yellow-600';
-      case 'low':
         return 'text-green-600';
+      case 'non-compliant':
+        return 'text-red-600';
+      case 'pending':
+        return 'text-yellow-600';
+      case 'expired':
+        return 'text-red-600';
       default:
         return 'text-gray-600';
     }
   };
 
-  const getStatusIcon = (status: ComplianceRequirement['status']) => {
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-100 text-red-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'compliant':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
@@ -107,20 +96,36 @@ const Compliance: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">Compliance Management</h1>
         <div className="flex space-x-3">
           <button
-            onClick={() => fetchRequirements()}
+            onClick={() => fetchCompliance()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <RefreshCw className="h-5 w-5 mr-2" />
             Refresh
           </button>
           <button
+            onClick={() => setShowAddForm(true)}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Add Requirement
+            Add Compliance Record
           </button>
         </div>
       </div>
+
+      {showAddForm && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Add New Compliance Record</h2>
+            <AddComplianceForm
+              onSuccess={() => {
+                setShowAddForm(false);
+                fetchCompliance();
+              }}
+              onCancel={() => setShowAddForm(false)}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mb-6">
         <div className="flex items-center space-x-4">
@@ -144,44 +149,48 @@ const Compliance: React.FC = () => {
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
-          {requirements.map((requirement) => (
-            <li key={requirement.id}>
+          {compliance.map((item) => (
+            <li key={item.id}>
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <ShieldCheck className="h-6 w-6 text-gray-400 mr-3" />
                     <div>
                       <p className="text-sm font-medium text-blue-600 truncate">
-                        {requirement.title}
+                        {item.title}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {requirement.description}
+                        {item.standard} - {item.requirement}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(requirement.status)}`}>
-                      {getStatusIcon(requirement.status)}
-                      <span className="ml-1">{requirement.status}</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(item.priority)}`}>
+                      {item.priority}
                     </span>
-                    <span className={`text-sm font-medium ${getPriorityColor(requirement.priority)}`}>
-                      {requirement.priority} priority
+                    <span className={`text-sm font-medium ${getStatusColor(item.status)}`}>
+                      {item.status}
                     </span>
                   </div>
                 </div>
                 <div className="mt-2 sm:flex sm:justify-between">
                   <div className="sm:flex">
                     <p className="flex items-center text-sm text-gray-500">
-                      Due: {new Date(requirement.dueDate).toLocaleDateString()}
+                      Due: {new Date(item.dueDate).toLocaleDateString()}
                     </p>
                     <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                      Last checked: {new Date(requirement.lastChecked).toLocaleDateString()}
+                      Last Check: {new Date(item.lastChecked).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                    <p>Assigned to: {requirement.assignedTo}</p>
+                    <p>Assigned to: {item.assignedTo}</p>
                   </div>
                 </div>
+                {item.notes && (
+                  <div className="mt-2 text-sm text-gray-500">
+                    <p>Notes: {item.notes}</p>
+                  </div>
+                )}
               </div>
             </li>
           ))}

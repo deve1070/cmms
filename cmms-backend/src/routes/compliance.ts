@@ -20,8 +20,26 @@ router.get('/', authenticateToken, authorizeRole([Role.ADMIN, Role.BIOMEDICAL_EN
         equipment: true
       }
     });
-    res.json(compliance);
+
+    // Transform the data to match the frontend's expected structure
+    const transformedCompliance = compliance.map(record => ({
+      id: record.id,
+      title: `${record.standard} Compliance`,
+      description: `Compliance requirement for ${record.equipment.manufacturerName} ${record.equipment.modelNumber}`,
+      standard: record.standard,
+      category: 'regulatory',
+      requirement: record.standard,
+      status: record.status.toLowerCase() as 'expired' | 'pending' | 'compliant' | 'non-compliant',
+      dueDate: record.nextDue,
+      lastChecked: record.lastCheck,
+      assignedTo: 'System',
+      priority: 'medium' as const,
+      notes: record.notes
+    }));
+
+    res.json(transformedCompliance);
   } catch (error) {
+    console.error('Error fetching compliance records:', error);
     res.status(500).json({ error: 'Failed to fetch compliance records' });
   }
 });
@@ -122,7 +140,8 @@ router.get('/analytics', authenticateToken, authorizeRole([Role.ADMIN]), async (
     const analytics = {
       totalRecords: compliance.length,
       byStatus: compliance.reduce((acc, c) => {
-        acc[c.status] = (acc[c.status] || 0) + 1;
+        const status = c.status.toLowerCase();
+        acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
       byStandard: compliance.reduce((acc, c) => {
@@ -134,11 +153,25 @@ router.get('/analytics', authenticateToken, authorizeRole([Role.ADMIN]), async (
         const today = new Date();
         const diffDays = Math.ceil((nextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         return diffDays <= 30 && diffDays > 0;
-      })
+      }).map(c => ({
+        id: c.id,
+        title: `${c.standard} Compliance`,
+        description: `Compliance requirement for ${c.equipment.manufacturerName} ${c.equipment.modelNumber}`,
+        standard: c.standard,
+        category: 'regulatory',
+        requirement: c.standard,
+        status: c.status.toLowerCase() as 'expired' | 'pending' | 'compliant' | 'non-compliant',
+        dueDate: c.nextDue,
+        lastChecked: c.lastCheck,
+        assignedTo: 'System',
+        priority: 'medium' as const,
+        notes: c.notes
+      }))
     };
 
     res.json(analytics);
   } catch (error) {
+    console.error('Error generating compliance analytics:', error);
     res.status(500).json({ error: 'Failed to generate compliance analytics' });
   }
 });

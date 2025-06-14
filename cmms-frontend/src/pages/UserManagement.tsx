@@ -17,6 +17,8 @@ import {
 interface ExtendedUser extends User {
   status: 'active' | 'inactive' | 'suspended';
   lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const UserManagement: React.FC = () => {
@@ -36,6 +38,8 @@ const UserManagement: React.FC = () => {
         ...u,
         status: u.status || 'active',
         lastLogin: u.lastLogin || undefined,
+        createdAt: new Date(u.createdAt).toISOString(),
+        updatedAt: new Date(u.updatedAt).toISOString()
       }));
       const filteredData = selectedRole === 'all'
         ? mappedUsers
