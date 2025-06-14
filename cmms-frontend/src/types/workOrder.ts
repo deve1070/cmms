@@ -9,9 +9,9 @@ export interface WorkOrder {
     location: string;
   };
   issue: string;
-  type: 'Preventive' | 'Corrective' | 'Calibration' | 'Inspection';
+  type: 'Preventive' | 'Corrective' | 'Calibration' | 'Inspection' | 'Issue Report';
   priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Reported' | 'Assigned' | 'In Progress' | 'On Hold' | 'Completed' | 'Cancelled';
+  status: 'Open' | 'Reported' | 'Assigned' | 'In Progress' | 'On Hold' | 'Completed' | 'Cancelled';
   description?: string;
   reportedById: string;
   reportedBy: {

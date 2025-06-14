@@ -13,11 +13,36 @@ import {
   AlertTriangle,
   Plus,
   Beaker,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 import SharedLayout from '../components/SharedLayout';
 import type { Equipment } from '../types/equipment';
 import type { WorkOrder } from '../types/workOrder';
 import type { MaintenanceReport } from '../types/maintenance';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Card } from '../components/ui/card';
+import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
+import { Input } from '../components/ui/input';
 
 const sidebar = (
   <nav className="flex flex-col space-y-1 p-4">
@@ -48,6 +73,18 @@ const LabTechDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [newReport, setNewReport] = useState({
+    issue: '',
+    priority: 'Medium',
+    description: ''
+  });
+  const [equipmentUpdate, setEquipmentUpdate] = useState({
+    status: '',
+    notes: ''
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -85,6 +122,64 @@ const LabTechDashboard: React.FC = () => {
         break;
       default:
         break;
+    }
+  };
+
+  const handleReportIssue = async () => {
+    if (!selectedEquipment) return;
+
+    try {
+      const workOrder = await workOrdersApi.create({
+        equipmentId: selectedEquipment.id,
+        issue: newReport.issue,
+        priority: newReport.priority,
+        description: newReport.description,
+        status: 'Open',
+        type: 'Issue Report'
+      }) as WorkOrder;
+
+      setWorkOrders(prev => [...prev, workOrder]);
+      toast.success('Issue reported successfully');
+      setReportDialogOpen(false);
+      setNewReport({ issue: '', priority: 'Medium', description: '' });
+    } catch (error) {
+      console.error('Error reporting issue:', error);
+      toast.error('Failed to report issue');
+    }
+  };
+
+  const handleUpdateEquipment = async () => {
+    if (!selectedEquipment) return;
+
+    try {
+      const updatedEquipment = await equipmentApi.update(selectedEquipment.id, {
+        ...selectedEquipment,
+        status: equipmentUpdate.status as Equipment['status'],
+        lastMaintenance: new Date().toISOString()
+      }) as Equipment;
+
+      setEquipment(prev => prev.map(eq => 
+        eq.id === updatedEquipment.id ? updatedEquipment : eq
+      ));
+      toast.success('Equipment status updated successfully');
+      setUpdateDialogOpen(false);
+      setEquipmentUpdate({ status: '', notes: '' });
+    } catch (error) {
+      console.error('Error updating equipment:', error);
+      toast.error('Failed to update equipment status');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Operational':
+        return 'bg-green-100 text-green-800';
+      case 'Needs Maintenance':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Out of Service':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -228,16 +323,9 @@ const LabTechDashboard: React.FC = () => {
                         <h3 className="font-medium text-gray-800">{item.name}</h3>
                         <p className="text-sm text-gray-500">{item.location}</p>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${item.status === 'Operational'
-                            ? 'bg-green-100 text-green-700'
-                            : item.status === 'Needs Maintenance'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}
-                      >
+                      <Badge className={getStatusColor(item.status)}>
                         {item.status}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -281,6 +369,100 @@ const LabTechDashboard: React.FC = () => {
           </section>
         </motion.div>
       )}
+
+      {/* Report Issue Dialog */}
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report Equipment Issue</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Issue Type</label>
+              <Input
+                value={newReport.issue}
+                onChange={(e) => setNewReport(prev => ({ ...prev, issue: e.target.value }))}
+                placeholder="Describe the issue"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Priority</label>
+              <Select
+                value={newReport.priority}
+                onValueChange={(value) => setNewReport(prev => ({ ...prev, priority: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                value={newReport.description}
+                onChange={(e) => setNewReport(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Provide detailed description of the issue"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleReportIssue}>
+              Submit Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Status Dialog */}
+      <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Equipment Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Status</label>
+              <Select
+                value={equipmentUpdate.status}
+                onValueChange={(value) => setEquipmentUpdate(prev => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Operational">Operational</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
+                  <SelectItem value="Out of Service">Out of Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Notes</label>
+              <Textarea
+                value={equipmentUpdate.notes}
+                onChange={(e) => setEquipmentUpdate(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Add any relevant notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpdateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateEquipment}>
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SharedLayout>
   );
 };

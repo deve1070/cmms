@@ -5,7 +5,7 @@ export interface Equipment {
   model: string;
   location: string;
   locationDescription?: string;
-  status: 'Operational' | 'Needs Maintenance' | 'Out of Service' | 'Decommissioned';
+  status: 'Operational' | 'Needs Maintenance' | 'Out of Service' | 'Decommissioned' | 'Maintenance' | 'Repair';
   lastMaintenance?: string;
   nextMaintenance?: string;
   installationDate?: string;
@@ -24,4 +24,11 @@ export interface Equipment {
   createdAt?: string;
   updatedAt?: string;
   inventoryNumber: string;
+  type?: string;
+  functionality?: {
+    primary?: string;
+    operatingHours?: number;
+    efficiencyRating?: string;
+    lastPerformanceCheck?: string;
+  };
 } 
