@@ -89,9 +89,6 @@ const AddEquipment: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Add New Equipment</h1>
-          <Button variant="outline" onClick={() => navigate('/biomedical/equipment')}>
-            Cancel
-          </Button>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">

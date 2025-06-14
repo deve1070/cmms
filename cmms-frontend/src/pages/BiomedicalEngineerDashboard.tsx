@@ -19,6 +19,7 @@ import {
 import type { Equipment } from '../types/equipment';
 import type { WorkOrder } from '../types/workOrder';
 import type { MaintenanceReport } from '../types/maintenance';
+import EquipmentFaults from '../components/EquipmentFaults';
 
 const BiomedicalEngineerDashboard: React.FC = () => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -443,6 +444,11 @@ const BiomedicalEngineerDashboard: React.FC = () => {
                 </table>
               </div>
             </div>
+          </section>
+
+          {/* Equipment Faults Section */}
+          <section className="bg-white p-6 rounded-xl shadow-sm">
+            <EquipmentFaults />
           </section>
         </motion.div>
       )}
