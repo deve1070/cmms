@@ -85,6 +85,7 @@ router.post('/', authenticateToken, authorizeRole([Role.LAB_TECHNICIAN]), async 
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
+    // Create the issue report
     const issueReport = await prisma.issueReport.create({
       data: {
         equipment: { connect: { id: equipmentId } },

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { AuthenticatedRequest } from '../types/express';
 import { Role, Permission } from '../config/permissions';
+import { BackendUserRole, mapToFrontendRole } from '../types/auth';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
@@ -83,10 +84,20 @@ export const authorizeRole = (roles: Role[]) => {
       });
     }
 
-    const userRole = req.user.role.toUpperCase();
-    const hasRole = roles.some(role => role.toUpperCase() === userRole);
+    // Map backend role to frontend role format
+    const userRole = req.user.role as unknown as BackendUserRole;
+    const hasRole = roles.some(role => {
+      // Map backend role to frontend role
+      const mappedRole = mapToFrontendRole(userRole);
+      return mappedRole === role;
+    });
 
     if (!hasRole) {
+      console.error('Role mismatch:', {
+        userRole: req.user.role,
+        mappedRole: mapToFrontendRole(userRole),
+        requiredRoles: roles
+      });
       return res.status(403).json({
         error: 'Insufficient permissions',
         code: 'ROLE_UNAUTHORIZED',

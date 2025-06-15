@@ -1,8 +1,8 @@
 export enum Role {
-  ADMIN = 'admin',
-  BIOMEDICAL_ENGINEER = 'biomedical engineer',
-  LAB_TECHNICIAN = 'laboratory technician',
-  MAINTENANCE_TECHNICIAN = 'maintenance technician'
+  ADMIN = 'Admin',
+  BIOMEDICAL_ENGINEER = 'BiomedicalEngineer',
+  MAINTENANCE_TECHNICIAN = 'MaintenanceTechnician',
+  LAB_TECHNICIAN = 'LabTechnician'
 }
 
 export const rolePermissions = {

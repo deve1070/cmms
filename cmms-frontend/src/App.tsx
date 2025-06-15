@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Role } from './config/permissions';
 import MaintenanceTechRoute from './components/MaintenanceTechRoute';
+import LabTechRoute from './components/LabTechRoute';
 
 // Public pages
 import Welcome from './pages/Welcome';
@@ -24,6 +25,9 @@ import ActivityLog from './pages/ActivityLog';
 import Budgets from './pages/Budgets';
 import Compliance from './pages/Compliance';
 import ReportMaintenance from './pages/ReportMaintenance';
+import LabEquipmentList from './pages/LabEquipmentList';
+import LabReports from './pages/LabReports';
+import LabNotifications from './pages/LabNotifications';
 
 // Biomedical pages
 import BiomedicalLayout from './components/BiomedicalLayout';
@@ -88,8 +92,14 @@ const App: React.FC = () => {
           </Route>
 
           {/* Lab Technician routes */}
-          <Route path="/lab-tech" element={<LabTechDashboard />} />
-          <Route path="/lab-tech/activity-log" element={<ActivityLog />} />
+          <Route path="/lab" element={<LabTechRoute />}>
+            <Route index element={<LabTechDashboard />} />
+            <Route path="dashboard" element={<LabTechDashboard />} />
+            <Route path="equipment" element={<LabEquipmentList />} />
+            <Route path="reports" element={<LabReports />} />
+            <Route path="notifications" element={<LabNotifications />} />
+            <Route path="activity-log" element={<ActivityLog />} />
+          </Route>
 
           {/* Maintenance Technician routes */}
           <Route

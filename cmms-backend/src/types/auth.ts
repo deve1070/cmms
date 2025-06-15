@@ -1,6 +1,16 @@
 import { Role, Permission } from '../config/permissions';
 
-export type BackendUserRole = Role;
+export type BackendUserRole = 
+  | 'admin'
+  | 'laboratory technician'
+  | 'biomedical engineer'
+  | 'engineer for maintenance';
+
+export type FrontendUserRole = 
+  | 'Admin'
+  | 'LabTechnician'
+  | 'BiomedicalEngineer'
+  | 'MaintenanceTechnician';
 
 export interface LoginResponse {
   token: string;
@@ -17,21 +27,32 @@ export interface LoginResponse {
   };
 }
 
-export const mapToFrontendRole = (role: BackendUserRole): string => {
-  // Convert role to lowercase for comparison
-  const roleLower = role.toLowerCase();
-  
-  switch (roleLower) {
+export const mapToFrontendRole = (role: BackendUserRole): FrontendUserRole => {
+  switch (role.toLowerCase()) {
     case 'admin':
-      return 'admin';
-    case 'biomedical engineer':
-      return 'biomedical engineer';
-    case 'engineer for maintenance':
-      return 'engineer for maintenance';
+      return 'Admin';
     case 'laboratory technician':
-      return 'laboratory technician';
+      return 'LabTechnician';
+    case 'biomedical engineer':
+      return 'BiomedicalEngineer';
+    case 'engineer for maintenance':
+      return 'MaintenanceTechnician';
     default:
-      console.error('Unknown role:', role);
-      throw new Error(`Unknown role: ${role}`);
+      return 'LabTechnician'; // Default to LabTechnician for unknown roles
+  }
+};
+
+export const mapToBackendRole = (role: FrontendUserRole): BackendUserRole => {
+  switch (role) {
+    case 'Admin':
+      return 'admin';
+    case 'LabTechnician':
+      return 'laboratory technician';
+    case 'BiomedicalEngineer':
+      return 'biomedical engineer';
+    case 'MaintenanceTechnician':
+      return 'engineer for maintenance';
+    default:
+      return 'laboratory technician'; // Default to laboratory technician for unknown roles
   }
 }; 

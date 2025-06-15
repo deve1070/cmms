@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, LoginCredentials, LoginResponse, mapToBackendRole, FrontendUserRole } from '../types/auth';
+import { User, LoginCredentials, LoginResponse, FrontendUserRole, mapFrontendUserToBackend, FrontendUser } from '../types/auth';
 import { Budget } from '../types/budget';
 import { ComplianceRequirement } from '../types/compliance';
 import { Contract } from '../types/contract';
@@ -7,58 +7,95 @@ import { Equipment } from '../types/equipment';
 import { WorkOrder } from '../types/workOrder';
 import { MaintenanceReport } from '../types/maintenance';
 import { SparePart } from '../types/sparePart';
-import { IssueReport } from '../types/issueReport';
+import { IssueReport, CreateIssueReportDto } from '../types/issueReport';
+import { toast } from 'react-hot-toast';
 
 const API_URL = '/api'; // Use relative URL to work with proxy
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add request interceptor to include auth token and map roles
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // If there's data in the request and it contains a role, map it to backend format
+    if (config.data && typeof config.data === 'object' && 'role' in config.data) {
+      const userData = config.data as FrontendUser;
+      config.data = {
+        ...config.data,
+        role: mapFrontendUserToBackend(userData).role
+      };
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
+);
 
-  // Map role to backend format if it exists in the request data
-  if (config.data && typeof config.data === 'object' && 'role' in config.data) {
-    const data = config.data as { role: FrontendUserRole };
-    config.data = {
-      ...config.data,
-      role: mapToBackendRole(data.role)
-    };
-  }
-
-  return config;
-});
-
-// Add response interceptor to handle token expiration
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 403 || error.response?.status === 401) {
-      // Only redirect if we're not already on the login page
-      if (!window.location.pathname.includes('/login')) {
-        // Clear auth data
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If the error is 401/403 and we haven't retried yet
+    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh the token using GET request
+        const response = await api.get<{ token: string }>('/auth/refresh');
+        const { token } = response.data;
         
-        // Only redirect if this is not a retry
-        if (!error.config._retry) {
-          error.config._retry = true;
-          // Use a more graceful redirect
+        // Update token in localStorage
+        localStorage.setItem('token', token);
+        
+        // Update the original request's authorization header
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        
+        // Retry the original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Only clear auth data and redirect if we're not already on the login page
+        // and if the request is not a retry
+        if (!window.location.pathname.includes('/login') && !originalRequest._isRetry) {
+          // Show error message before redirecting
+          toast.error('Your session has expired. Please log in again.');
+          
+          // Clear auth data
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          
+          // Redirect to login page after a short delay
           setTimeout(() => {
             window.location.href = '/login';
-          }, 100);
+          }, 1500);
         }
+        
+        return Promise.reject(refreshError);
       }
     }
+
+    // For other errors, show the error message from the response
+    if (error.response?.data?.error) {
+      toast.error(error.response.data.error);
+    } else {
+      toast.error('An error occurred. Please try again.');
+    }
+
     return Promise.reject(error);
   }
 );
@@ -266,7 +303,7 @@ export const issueReportsApi = {
     const response = await api.get<IssueReport>(`/issue-reports/${id}`);
     return response.data;
   },
-  create: async (data: Omit<IssueReport, 'id' | 'createdAt' | 'updatedAt' | 'reportedBy'>): Promise<IssueReport> => {
+  create: async (data: CreateIssueReportDto & { status: string; reportedById: string }): Promise<IssueReport> => {
     const response = await api.post<IssueReport>('/issue-reports', data);
     return response.data;
   },

@@ -1,27 +1,21 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import api from '../services/api';
 import { 
-  User, 
-  LoginCredentials, 
-  FrontendUserRole, 
-  BackendUserRole,
-  mapToFrontendRole,
-  mapToBackendRole 
+  FrontendUser, 
+  BackendUser, 
+  mapBackendUserToFrontend, 
+  mapFrontendUserToBackend,
+  getUserDisplayName 
 } from '../types/auth';
 
-const API_URL = '/api';
-
-interface LoginResponse {
-  token: string;
-  user: User;
-}
-
 interface AuthContextType {
-  user: User | null;
+  user: FrontendUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -29,155 +23,110 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<FrontendUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleAuthError = useCallback(() => {
+  const handleAuthError = (error: any) => {
+    console.error('Auth error:', error);
+    setError(error.message || 'Authentication failed');
+    setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setUser(null);
-    setIsAuthenticated(false);
     navigate('/login');
-  }, [navigate]);
-
-  const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-    const token = localStorage.getItem('token');
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    };
-
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers,
-        credentials: 'include',
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        handleAuthError();
-        throw new Error('Authentication required');
-      }
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Authentication required') {
-        throw error;
-      }
-      console.error('API request error:', error);
-      throw new Error('Failed to make API request');
-    }
   };
 
-  const checkAuth = useCallback(async () => {
+  const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        setUser(null);
         setIsLoading(false);
         return;
       }
 
-      const data = await apiRequest('/auth/check');
-      if (!data || !data.user) {
-        throw new Error('Invalid response from auth check');
-      }
-
-      const userData: User = {
-        ...data.user,
-        role: mapToFrontendRole(data.user.role),
-      };
-
-      setUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (err) {
-      console.error('Auth check error:', err);
-      handleAuthError();
+      const response = await api.get<BackendUser>('/auth/me');
+      const frontendUser = mapBackendUserToFrontend(response.data);
+      setUser(frontendUser);
+    } catch (error) {
+      handleAuthError(error);
     } finally {
       setIsLoading(false);
     }
-  }, [handleAuthError]);
+  };
 
-  const login = async (credentials: LoginCredentials): Promise<void> => {
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const login = async (username: string, password: string) => {
     try {
-      console.log('Making login request with credentials:', credentials);
-      const response = await apiRequest('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials)
-      }) as LoginResponse;
-      console.log('Received login response:', response);
+      console.log('Making login request with:', { username, password });
+      const response = await api.post<{ token: string; user: BackendUser }>('/auth/login', {
+        username,
+        password
+      });
 
-      const mappedUser = {
-        ...response.user,
-        role: mapToFrontendRole(response.user.role as BackendUserRole)
-      };
-      console.log('Mapped user data:', mappedUser);
+      console.log('Login response:', response.data);
+      const { token, user } = response.data;
+      const frontendUser = mapBackendUserToFrontend(user);
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(frontendUser));
+      setUser(frontendUser);
+      toast.success('Login successful');
 
-      setUser(mappedUser);
-      localStorage.setItem('user', JSON.stringify(mappedUser));
-      localStorage.setItem('token', response.token);
-
-      // Role-based redirection
-      switch (mappedUser.role) {
-        case 'admin':
-          navigate('/admin');
+      // Redirect based on role
+      switch (frontendUser.role) {
+        case 'Admin':
+          navigate('/admin/dashboard');
           break;
-        case 'biomedical engineer':
-          navigate('/biomed');
+        case 'BiomedicalEngineer':
+          navigate('/biomedical/dashboard');
           break;
-        case 'laboratory technician':
-          navigate('/lab-tech');
+        case 'LabTechnician':
+          navigate('/lab/dashboard');
           break;
-        case 'engineer for maintenance':
-          navigate('/maintenance');
+        case 'MaintenanceTechnician':
+          navigate('/maintenance/dashboard');
           break;
         default:
-          navigate('/unauthorized');
+          navigate('/dashboard');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
+      const errorMessage = error.response?.data?.error || 'Login failed';
+      toast.error(errorMessage);
       throw error;
     }
   };
 
-  const logout = useCallback(async () => {
+  const logout = async () => {
     try {
-      await apiRequest('/api/auth/logout', { method: 'POST' });
-    } catch (err) {
-      console.error('Logout error:', err);
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
     } finally {
+      setUser(null);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      setUser(null);
-      setIsAuthenticated(false);
       navigate('/login');
     }
-  }, [navigate]);
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  const contextValue = {
-    user,
-    isAuthenticated,
-    isLoading,
-    error,
-    login,
-    logout,
-    checkAuth,
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        error,
+        login,
+        logout,
+        checkAuth
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

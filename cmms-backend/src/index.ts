@@ -101,9 +101,11 @@ app.get('/api/health', (req, res) => {
 // Enhanced login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
+    console.log('Received login request:', req.body);
     const { username, password } = req.body;
     
     if (!username || !password) {
+      console.error('Missing credentials:', { username: !!username, password: !!password });
       return res.status(400).json({ 
         error: 'Username and password are required',
         code: 'MISSING_CREDENTIALS'
@@ -122,16 +124,29 @@ app.post('/api/auth/login', async (req, res) => {
         permissions: true,
         lastLogin: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        status: true
       }
     });
 
-    console.log('User from database:', user);
+    console.log('User from database:', { 
+      found: !!user,
+      username: user?.username,
+      role: user?.role,
+      status: user?.status
+    });
 
     if (!user) {
       return res.status(401).json({ 
         error: 'Invalid credentials',
         code: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    if (user.status !== 'active') {
+      return res.status(401).json({
+        error: 'Account is inactive',
+        code: 'ACCOUNT_INACTIVE'
       });
     }
 
@@ -156,42 +171,28 @@ app.post('/api/auth/login', async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
-      permissions: JSON.parse(user.permissions)
+      permissions: JSON.parse(user.permissions || '[]')
     }, JWT_SECRET, { expiresIn: '24h' });
 
-    console.log('User role before mapping:', user.role);
-    const mappedRole = mapToFrontendRole(user.role as BackendUserRole);
-    console.log('Mapped role:', mappedRole);
-
-    const response: LoginResponse = {
+    const response = {
       token,
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: mappedRole,
+        role: mapToFrontendRole(user.role as BackendUserRole),
         department: user.department || undefined,
-        permissions: JSON.parse(user.permissions),
-        status: 'active',
+        permissions: JSON.parse(user.permissions || '[]'),
+        status: user.status,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString()
       }
     };
 
-    console.log('Login response:', response);
-
-    // Broadcast login notification via WebSocket
-    wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'user_login',
-          data: {
-            userId: user.id,
-            username: user.username,
-            timestamp: new Date().toISOString()
-          }
-        }));
-      }
+    console.log('Sending login response:', {
+      userId: response.user.id,
+      username: response.user.username,
+      role: response.user.role
     });
 
     res.json(response);
@@ -615,6 +616,86 @@ app.use('/api/budgets', budgetsRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/contracts', contractsRouter);
 app.use('/api/issue-reports', issueReportsRouter);
+
+// Token refresh endpoint
+app.get('/api/auth/refresh', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'No token provided',
+        code: 'NO_TOKEN'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    
+    try {
+      // First try to verify the token
+      decoded = jwt.verify(token, JWT_SECRET) as {
+        id: string;
+        username: string;
+        email: string;
+        role: string;
+        permissions: string[];
+      };
+    } catch (verifyError) {
+      // If verification fails, try to decode without verification
+      try {
+        decoded = jwt.decode(token) as {
+          id: string;
+          username: string;
+          email: string;
+          role: string;
+          permissions: string[];
+        };
+      } catch (decodeError) {
+        return res.status(401).json({
+          error: 'Invalid token',
+          code: 'INVALID_TOKEN'
+        });
+      }
+    }
+
+    // Verify user still exists and is active
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        permissions: true,
+        status: true
+      }
+    });
+
+    if (!user || user.status !== 'active') {
+      return res.status(401).json({
+        error: 'User not found or inactive',
+        code: 'INVALID_USER'
+      });
+    }
+
+    // Generate a new token
+    const newToken = jwt.sign({ 
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      permissions: JSON.parse(user.permissions || '[]')
+    }, JWT_SECRET, { expiresIn: '24h' });
+
+    res.json({ token: newToken });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(401).json({ 
+      error: 'Invalid or expired token',
+      code: 'INVALID_TOKEN'
+    });
+  }
+});
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

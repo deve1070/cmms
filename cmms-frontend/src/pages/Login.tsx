@@ -18,7 +18,7 @@ const Login: React.FC = () => {
     console.log('Login attempt:', { username, password });
 
     try {
-      await login({ username, password });
+      await login(username, password);
     } catch (err) {
       console.error('Login error:', err);
       setError('Invalid username or password');
