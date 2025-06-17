@@ -22,7 +22,7 @@ async function main() {
   // Create default user
   console.log('Creating default user...');
   const defaultUser = await prisma.user.create({
-    data: {
+      data: {
       id: 'default-user',
       username: 'system',
       email: 'system@example.com',
@@ -97,7 +97,7 @@ async function main() {
   const maintenanceReports = await Promise.all(
     createdEquipment.map(async (equipment) => {
       return prisma.maintenanceReport.create({
-        data: {
+      data: {
           equipmentId: equipment.id,
           type: 'Preventive',
           description: `Regular maintenance check for ${equipment.modelNumber}`,
@@ -117,14 +117,14 @@ async function main() {
   const issueReports = await Promise.all(
     createdEquipment.map(async (equipment) => {
       return prisma.issueReport.create({
-        data: {
+      data: {
           equipmentId: equipment.id,
           issue: `Calibration needed for ${equipment.modelNumber}`,
           priority: 'Medium',
           description: 'Regular calibration check required',
           status: 'Pending',
           reportedById: defaultUser.id
-        }
+      }
       });
     })
   );

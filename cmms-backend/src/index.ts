@@ -23,6 +23,8 @@ const port = 3002;
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+app.use(express.json()); // Parse JSON first
+
 // Create HTTP server and WebSocket server
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
@@ -61,13 +63,12 @@ wss.on('connection', (ws: WebSocket) => {
   }));
 });
 
-// Configure CORS
+// Configure CORS to allow all origins
 app.use(cors({
-  origin: ['http://localhost:3004', 'http://localhost:3000', 'http://localhost:3003'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  exposedHeaders: ['Content-Type', 'Authorization']
+  origin: true, // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 // Request logging middleware
@@ -83,8 +84,6 @@ app.use((req, res, next) => {
   res.setHeader('Content-Type', 'application/json');
   next();
 });
-
-app.use(express.json());
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -260,6 +259,70 @@ app.get('/api/auth/check', authenticateToken, async (req: AuthRequest, res) => {
     };
 
     res.json({ user: mappedUser });
+  } catch (error) {
+    console.error('Auth check error:', error);
+    res.status(500).json({ 
+      error: 'Authentication check failed',
+      code: 'AUTH_CHECK_FAILED'
+    });
+  }
+});
+
+// Enhanced auth check endpoint
+app.get('/api/auth/me', authenticateToken, async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ 
+      error: 'User not authenticated',
+      code: 'NOT_AUTHENTICATED'
+    });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        department: true,
+        permissions: true,
+        status: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    if (user.status !== 'active') {
+      return res.status(401).json({
+        error: 'User account is inactive',
+        code: 'USER_INACTIVE'
+      });
+    }
+
+    // Map the user data to include parsed permissions and proper date formatting
+    const mappedUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: mapToFrontendRole(user.role as BackendUserRole),
+      department: user.department || undefined,
+      permissions: JSON.parse(user.permissions || '[]'),
+      status: user.status,
+      lastLogin: user.lastLogin ? new Date(user.lastLogin).toISOString() : null,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString()
+    };
+
+    res.json(mappedUser);
   } catch (error) {
     console.error('Auth check error:', error);
     res.status(500).json({ 
@@ -618,81 +681,27 @@ app.use('/api/contracts', contractsRouter);
 app.use('/api/issue-reports', issueReportsRouter);
 
 // Token refresh endpoint
-app.get('/api/auth/refresh', async (req, res) => {
+app.post('/api/auth/refresh', authenticateToken, async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'User not authenticated' });
+  }
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        error: 'No token provided',
-        code: 'NO_TOKEN'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    
-    try {
-      // First try to verify the token
-      decoded = jwt.verify(token, JWT_SECRET) as {
-        id: string;
-        username: string;
-        email: string;
-        role: string;
-        permissions: string[];
-      };
-    } catch (verifyError) {
-      // If verification fails, try to decode without verification
-      try {
-        decoded = jwt.decode(token) as {
-          id: string;
-          username: string;
-          email: string;
-          role: string;
-          permissions: string[];
-        };
-      } catch (decodeError) {
-        return res.status(401).json({
-          error: 'Invalid token',
-          code: 'INVALID_TOKEN'
-        });
-      }
-    }
-
-    // Verify user still exists and is active
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        role: true,
-        permissions: true,
-        status: true
-      }
-    });
-
-    if (!user || user.status !== 'active') {
-      return res.status(401).json({
-        error: 'User not found or inactive',
-        code: 'INVALID_USER'
-      });
-    }
-
     // Generate a new token
-    const newToken = jwt.sign({ 
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      permissions: JSON.parse(user.permissions || '[]')
+    const token = jwt.sign({ 
+      id: req.user.id,
+      username: req.user.username,
+      email: req.user.email,
+      role: req.user.role,
+      permissions: req.user.permissions
     }, JWT_SECRET, { expiresIn: '24h' });
 
-    res.json({ token: newToken });
+    res.json({ token });
   } catch (error) {
     console.error('Token refresh error:', error);
-    res.status(401).json({ 
-      error: 'Invalid or expired token',
-      code: 'INVALID_TOKEN'
+    res.status(500).json({ 
+      error: 'Token refresh failed',
+      code: 'REFRESH_FAILED'
     });
   }
 });

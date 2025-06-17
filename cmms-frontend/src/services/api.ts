@@ -13,31 +13,32 @@ import { toast } from 'react-hot-toast';
 const API_URL = '/api'; // Use relative URL to work with proxy
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3002/api',
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true
 });
 
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
 
     // If there's data in the request and it contains a role, map it to backend format
-    if (config.data && typeof config.data === 'object' && 'role' in config.data) {
+  if (config.data && typeof config.data === 'object' && 'role' in config.data) {
       const userData = config.data as FrontendUser;
-      config.data = {
-        ...config.data,
+    config.data = {
+      ...config.data,
         role: mapFrontendUserToBackend(userData).role
-      };
-    }
+    };
+  }
 
-    return config;
+  return config;
   },
   (error) => {
     return Promise.reject(error);
@@ -50,13 +51,16 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If the error is 401/403 and we haven't retried yet
-    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
+    // Only attempt token refresh for authenticated requests (those that have a token)
+    const hasToken = localStorage.getItem('token');
+    
+    // If the error is 401/403, we have a token, and we haven't retried yet
+    if ((error.response?.status === 401 || error.response?.status === 403) && hasToken && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        // Try to refresh the token using GET request
-        const response = await api.get<{ token: string }>('/auth/refresh');
+        // Try to refresh the token using POST request
+        const response = await api.post<{ token: string }>('/auth/refresh');
         const { token } = response.data;
         
         // Update token in localStorage

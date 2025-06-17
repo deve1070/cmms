@@ -91,165 +91,165 @@ const MaintenanceSchedule: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-red-500 text-center p-4">{error}</div>
+        <div className="text-red-500 text-center p-4">{error}</div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filter Controls */}
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            All Tasks
-          </button>
-          <button
-            onClick={() => setFilter('upcoming')}
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'upcoming' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Upcoming
-          </button>
-          <button
-            onClick={() => setFilter('in-progress')}
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'in-progress' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            In Progress
-          </button>
-          <button
-            onClick={() => setFilter('completed')}
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'completed' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Completed
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Maintenance Tasks List */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-md">
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Maintenance Tasks</h2>
-              <div className="space-y-4">
-                {maintenanceTasks.length > 0 ? (
-                  maintenanceTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className={`p-4 rounded-lg border ${
-                        selectedTask?.id === task.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
-                      } cursor-pointer transition-colors`}
-                      onClick={() => setSelectedTask(task)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{task.equipment.name}</p>
-                          <p className="text-sm text-gray-600">{task.type} Maintenance</p>
-                          <p className="text-xs text-gray-500">
-                            Due: {new Date(task.nextDueDate || task.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          task.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                          task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {task.status}
-                        </span>
-                      </div>
-                      {task.description && (
-                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-center py-4">No maintenance tasks found</p>
-                )}
-              </div>
-            </div>
+      <div className="space-y-6">
+        {/* Filter Controls */}
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="flex space-x-4">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-4 py-2 rounded-lg ${
+                filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Tasks
+            </button>
+            <button
+              onClick={() => setFilter('upcoming')}
+              className={`px-4 py-2 rounded-lg ${
+                filter === 'upcoming' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Upcoming
+            </button>
+            <button
+              onClick={() => setFilter('in-progress')}
+              className={`px-4 py-2 rounded-lg ${
+                filter === 'in-progress' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              In Progress
+            </button>
+            <button
+              onClick={() => setFilter('completed')}
+              className={`px-4 py-2 rounded-lg ${
+                filter === 'completed' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Completed
+            </button>
           </div>
         </div>
 
-        {/* Task Details */}
-        <div className="lg:col-span-1">
-          {selectedTask ? (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-lg font-semibold mb-4">Task Details</h2>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600">Equipment</p>
-                  <p className="font-medium">{selectedTask.equipment.name}</p>
-                  <p className="text-xs text-gray-500">{selectedTask.equipment.model}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Type</p>
-                  <p>{selectedTask.type} Maintenance</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Status</p>
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-sm ${
-                      selectedTask.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                      selectedTask.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {selectedTask.status}
-                    </span>
-                    {selectedTask.status !== 'Completed' && (
-                      <button
-                        onClick={() => handleStatusUpdate(
-                          selectedTask.id,
-                          selectedTask.status === 'In Progress' ? 'Completed' : 'In Progress'
-                        )}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Maintenance Tasks List */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-md">
+              <div className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Maintenance Tasks</h2>
+                <div className="space-y-4">
+                  {maintenanceTasks.length > 0 ? (
+                    maintenanceTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className={`p-4 rounded-lg border ${
+                          selectedTask?.id === task.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300'
+                        } cursor-pointer transition-colors`}
+                        onClick={() => setSelectedTask(task)}
                       >
-                        {selectedTask.status === 'In Progress' ? 'Mark as Completed' : 'Start Work'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {selectedTask.description && (
-                  <div>
-                    <p className="text-sm text-gray-600">Description</p>
-                    <p className="whitespace-pre-wrap">{selectedTask.description}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-gray-600">Due Date</p>
-                  <p>{new Date(selectedTask.nextDueDate || selectedTask.createdAt).toLocaleDateString()}</p>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">{task.equipment.name}</p>
+                            <p className="text-sm text-gray-600">{task.type} Maintenance</p>
+                            <p className="text-xs text-gray-500">
+                              Due: {new Date(task.nextDueDate || task.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-sm ${
+                            task.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                            task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {task.status}
+                          </span>
+                        </div>
+                        {task.description && (
+                          <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+                            {task.description}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No maintenance tasks found</p>
+                  )}
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <p className="text-gray-500 text-center">Select a task to view details</p>
-            </div>
-          )}
+          </div>
+
+          {/* Task Details */}
+          <div className="lg:col-span-1">
+            {selectedTask ? (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-lg font-semibold mb-4">Task Details</h2>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Equipment</p>
+                    <p className="font-medium">{selectedTask.equipment.name}</p>
+                    <p className="text-xs text-gray-500">{selectedTask.equipment.model}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Type</p>
+                    <p>{selectedTask.type} Maintenance</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Status</p>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-3 py-1 rounded-full text-sm ${
+                        selectedTask.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                        selectedTask.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {selectedTask.status}
+                      </span>
+                      {selectedTask.status !== 'Completed' && (
+                        <button
+                          onClick={() => handleStatusUpdate(
+                            selectedTask.id,
+                            selectedTask.status === 'In Progress' ? 'Completed' : 'In Progress'
+                          )}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          {selectedTask.status === 'In Progress' ? 'Mark as Completed' : 'Start Work'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {selectedTask.description && (
+                    <div>
+                      <p className="text-sm text-gray-600">Description</p>
+                      <p className="whitespace-pre-wrap">{selectedTask.description}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-gray-600">Due Date</p>
+                    <p>{new Date(selectedTask.nextDueDate || selectedTask.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <p className="text-gray-500 text-center">Select a task to view details</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
   );
 };
 

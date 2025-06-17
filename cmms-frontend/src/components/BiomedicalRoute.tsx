@@ -1,8 +1,10 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import BiomedicalLayout from './BiomedicalLayout';
+import SharedLayout from './SharedLayout';
+import BiomedicalSidebar from './BiomedicalSidebar';
 import { getUserDisplayName } from '../types/auth';
+import { Role } from '../config/permissions';
 
 const BiomedicalRoute: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -20,7 +22,7 @@ const BiomedicalRoute: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!user || user.role.toLowerCase() !== 'biomedical engineer') {
+  if (user.role !== Role.BIOMEDICAL_ENGINEER) {
     return <Navigate to="/unauthorized" replace />;
   }
 
@@ -34,12 +36,13 @@ const BiomedicalRoute: React.FC = () => {
   };
 
   return (
-    <BiomedicalLayout
+    <SharedLayout
       title={getPageTitle()}
+      sidebar={<BiomedicalSidebar />}
       userDisplayName={getUserDisplayName(user, 'Biomedical Engineer')}
     >
       <Outlet />
-    </BiomedicalLayout>
+    </SharedLayout>
   );
 };
 

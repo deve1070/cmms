@@ -26,7 +26,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         error: 'No token provided',
         code: 'NO_TOKEN'
       });
-    }
+  }
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET) as {

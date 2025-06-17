@@ -1,9 +1,9 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Role } from '../config/permissions';
 
-const MaintenanceTechRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const MaintenanceTechRoute: React.FC = () => {
   const { user } = useAuth();
 
   if (!user) {
@@ -14,7 +14,7 @@ const MaintenanceTechRoute: React.FC<{ children: React.ReactNode }> = ({ childre
     return <Navigate to="/unauthorized" replace />;
   }
 
-  return <>{children}</>;
+  return <Outlet />;
 };
 
 export default MaintenanceTechRoute; 

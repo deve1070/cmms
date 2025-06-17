@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import { 
-  FrontendUser, 
-  BackendUser, 
+  User as BackendUser, 
   mapBackendUserToFrontend, 
   mapFrontendUserToBackend,
-  getUserDisplayName 
+  getUserDisplayName,
+  FrontendUser
 } from '../types/auth';
+import { Role } from '../config/permissions';
 
 interface AuthContextType {
   user: FrontendUser | null;
@@ -70,7 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Login response:', response.data);
       const { token, user } = response.data;
+      console.log('Backend user role:', user.role);
       const frontendUser = mapBackendUserToFrontend(user);
+      console.log('Mapped frontend user role:', frontendUser.role);
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(frontendUser));
@@ -78,21 +81,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Login successful');
 
       // Redirect based on role
+      console.log('Redirecting based on role:', frontendUser.role);
       switch (frontendUser.role) {
-        case 'Admin':
+        case Role.ADMIN:
+          console.log('Redirecting to admin dashboard');
           navigate('/admin/dashboard');
           break;
-        case 'BiomedicalEngineer':
+        case Role.BIOMEDICAL_ENGINEER:
+          console.log('Redirecting to biomedical dashboard');
           navigate('/biomedical/dashboard');
           break;
-        case 'LabTechnician':
+        case Role.LAB_TECHNICIAN:
+          console.log('Redirecting to lab tech dashboard');
           navigate('/lab/dashboard');
           break;
-        case 'MaintenanceTechnician':
+        case Role.MAINTENANCE_TECHNICIAN:
+          console.log('Redirecting to maintenance dashboard');
           navigate('/maintenance/dashboard');
           break;
         default:
-          navigate('/dashboard');
+          console.log('Redirecting to welcome page');
+          navigate('/welcome');
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -118,12 +127,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider
       value={{
-        user,
+    user,
         isAuthenticated: !!user,
-        isLoading,
-        error,
-        login,
-        logout,
+    isLoading,
+    error,
+    login,
+    logout,
         checkAuth
       }}
     >

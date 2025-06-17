@@ -199,130 +199,106 @@ const BiomedicalEngineerDashboard: React.FC = () => {
                   color: 'text-blue-600',
                 },
                 {
-                  label: 'Pending Reports',
-                  value: maintenanceReports.filter((report) => report.status === 'Scheduled').length,
+                  label: 'Maintenance Reports',
+                  value: maintenanceReports.length,
                   icon: FileText,
-                  color: 'text-yellow-600',
-                },
-                {
-                  label: 'My Open Issues',
-                  value: workOrders.filter(
-                    (wo) =>
-                      wo.reportedById === user?.id &&
-                      wo.status !== 'Completed' &&
-                      wo.status !== 'Cancelled',
-                  ).length,
-                  icon: AlertTriangle,
                   color: 'text-purple-600',
                 },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-700">{stat.label}</h3>
+                {
+                  label: 'Equipment Faults',
+                  value: equipment.filter((e) => e.status === 'Needs Maintenance').length,
+                  icon: AlertTriangle,
+                  color: 'text-red-600',
+                },
+              ].map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                      <p className="text-2xl font-semibold mt-1">{stat.value}</p>
+                    </div>
                     <stat.icon className={`h-8 w-8 ${stat.color}`} />
                   </div>
-                  <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                </div>
+                </motion.div>
               ))}
             </div>
           </section>
 
+          {/* Equipment Section */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {[
-                {
-                  label: 'Create Work Order',
-                  icon: Plus,
-                  path: '/biomedical/work-orders/new',
-                  description: 'Create a new maintenance work order',
-                  bgColor: 'bg-blue-100',
-                  textColor: 'text-blue-600',
-                },
-                {
-                  label: 'View Equipment',
-                  icon: Package,
-                  path: '/biomedical/equipment',
-                  description: 'Check equipment status and details',
-                  bgColor: 'bg-green-100',
-                  textColor: 'text-green-600',
-                },
-              ].map((action) => (
-                <Link
-                  key={action.label}
-                  to={action.path}
-                  className="p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-lg ${action.bgColor}`}>
-                      <action.icon className={`h-6 w-6 ${action.textColor}`} />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-semibold text-gray-800">{action.label}</h3>
-                      <p className="text-sm text-gray-500">{action.description}</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Equipment</h2>
+              <Link
+                to="/biomedical/equipment/new"
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Add Equipment</span>
+              </Link>
             </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Work Orders</h2>
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reported</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Location
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Last Maintenance
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {workOrders.slice(0, 5).map((wo) => (
-                      <tr key={wo.id}>
+                    {filteredEquipment.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{wo.equipment.name}</div>
-                          <div className="text-sm text-gray-500">{wo.equipment.location}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">{wo.issue}</div>
-                          <div className="text-sm text-gray-500">{wo.description}</div>
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            wo.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            wo.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                            wo.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {wo.status}
-                          </span>
+                          <div className="text-sm text-gray-500">{item.location}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            wo.priority === 'Critical' ? 'bg-red-100 text-red-800' :
-                            wo.priority === 'High' ? 'bg-orange-100 text-orange-800' :
-                            wo.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {wo.priority}
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              item.status === 'Operational'
+                                ? 'bg-green-100 text-green-800'
+                                : item.status === 'Needs Maintenance'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {item.status}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(wo.createdAt).toLocaleDateString()}
+                          {item.lastMaintenance ? new Date(item.lastMaintenance).toLocaleDateString() : 'Never'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Link
-                            to={`/biomedical/work-orders/${wo.id}`}
-                            className="text-blue-600 hover:text-blue-900"
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <select
+                            value={item.status}
+                            onChange={(e) => handleStatusChange(item.id, e.target.value as Equipment['status'])}
+                            className="px-2 py-1 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
-                            View
-                          </Link>
+                            <option value="Operational">Operational</option>
+                            <option value="Needs Maintenance">Needs Maintenance</option>
+                            <option value="Out of Service">Out of Service</option>
+                          </select>
                         </td>
                       </tr>
                     ))}
@@ -332,114 +308,81 @@ const BiomedicalEngineerDashboard: React.FC = () => {
             </div>
           </section>
 
+          {/* Work Orders Section */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Maintenance Reports</h2>
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex items-center space-x-4">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                    <select
-                      value={typeFilter}
-                      onChange={(e) => setTypeFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="all">All Types</option>
-                      <option value="Preventive">Preventive</option>
-                      <option value="Corrective">Corrective</option>
-                      <option value="Calibration">Calibration</option>
-                      <option value="Inspection">Inspection</option>
-                    </select>
-                  </div>
-                  <Link
-                    to="/biomedical/reports/new"
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span>New Report</span>
-                  </Link>
-                </div>
-              </div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Work Orders</h2>
+              <Link
+                to="/biomedical/work-orders/new"
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Create Work Order</span>
+              </Link>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performed By</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Issue
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Equipment
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {maintenanceReports
-                      .filter(report => {
-                        const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
-                        const matchesType = typeFilter === 'all' || report.type === typeFilter;
-                        return matchesStatus && matchesType;
-                      })
-                      .slice(0, 5)
-                      .map((report) => (
-                        <tr key={report.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{report.equipment.name}</div>
-                            <div className="text-sm text-gray-500">{report.equipment.location}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              report.type === 'Preventive' ? 'bg-green-100 text-green-800' :
-                              report.type === 'Corrective' ? 'bg-red-100 text-red-800' :
-                              report.type === 'Calibration' ? 'bg-blue-100 text-blue-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {report.type}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              report.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              report.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                              report.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {report.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{report.performedBy.username}</div>
-                            <div className="text-sm text-gray-500">{report.performedBy.email}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(report.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Link
-                              to={`/biomedical/reports/${report.id}`}
-                              className="text-blue-600 hover:text-blue-900 mr-4"
-                            >
-                              View
-                            </Link>
-                            {report.status === 'Scheduled' && (
-                              <button
-                                onClick={() => handleReportStatusChange(report.id, 'In Progress')}
-                                className="text-green-600 hover:text-green-900"
-                              >
-                                Start
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                    {filteredWorkOrders.map((wo) => (
+                      <tr key={wo.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{wo.issue}</div>
+                          <div className="text-sm text-gray-500">{wo.description}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">{wo.equipmentId}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              wo.status === 'Completed'
+                                ? 'bg-green-100 text-green-800'
+                                : wo.status === 'In Progress'
+                                ? 'bg-blue-100 text-blue-800'
+                                : wo.status === 'Open'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {wo.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(wo.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <select
+                            value={wo.status}
+                            onChange={(e) => handleWorkOrderStatusChange(wo.id, e.target.value as WorkOrder['status'])}
+                            className="px-2 py-1 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
@@ -447,14 +390,73 @@ const BiomedicalEngineerDashboard: React.FC = () => {
             </div>
           </section>
 
-          {/* Equipment Report Generator Section */}
-          <section className="bg-white p-6 rounded-xl shadow-sm">
-            <EquipmentReportGenerator />
-          </section>
-
-          {/* Equipment Faults Section */}
-          <section className="bg-white p-6 rounded-xl shadow-sm">
-            <EquipmentFaults />
+          {/* Maintenance Reports Section */}
+          <section>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Maintenance Reports</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Equipment
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {maintenanceReports.map((report) => (
+                      <tr key={report.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{report.equipmentId}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">{report.type}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              report.status === 'Completed'
+                                ? 'bg-green-100 text-green-800'
+                                : report.status === 'In Progress'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}
+                          >
+                            {report.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(report.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <select
+                            value={report.status}
+                            onChange={(e) => handleReportStatusChange(report.id, e.target.value as MaintenanceReport['status'])}
+                            className="px-2 py-1 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </section>
         </motion.div>
       )}
